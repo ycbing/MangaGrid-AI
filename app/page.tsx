@@ -140,7 +140,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-            <Link href="/create" className="w-full sm:w-auto">
+            <Link href="/comic/new" className="w-full sm:w-auto">
               <Button size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-base px-8 w-full sm:w-auto min-h-[44px]">
                 <Sparkles className="h-4 w-4 mr-2" />
                 开始创作
@@ -193,7 +193,7 @@ export default function HomePage() {
             {templates.map((t) => (
               <Link
                 key={t.title}
-                href={`/create?theme=${encodeURIComponent(t.theme)}&genre=${t.genre}&style=${t.style}`}
+                href="/comic/new"
                 className="border border-border/50 rounded-xl p-4 sm:p-5 bg-card/30 hover:border-emerald-500/30 hover:bg-card/50 transition-all group cursor-pointer"
               >
                 <span className="text-2xl sm:text-3xl mb-2 sm:mb-3 block">{t.emoji}</span>

@@ -12,6 +12,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api") ||
     pathname.startsWith("/view/") ||
     pathname.startsWith("/share/") ||
+    pathname.startsWith("/share-comic/") ||
     pathname === "/gallery" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password" ||

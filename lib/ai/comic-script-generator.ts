@@ -46,7 +46,7 @@ const GENRE_ZH: Record<string, string> = {
   scifi: "科幻",
 };
 
-const STYLE_PROMPT: Record<string, string> = {
+export const STYLE_PROMPT: Record<string, string> = {
   manga: "日式漫画风格（黑白为主，网点纹理，清晰线条，人物比例写实偏美型）",
   manhua: "国漫风格（彩色，精美厚涂，光影丰富，角色美型）",
   ink: "水墨国风（传统水墨渲染，留白构图，意境感强）",
@@ -54,6 +54,41 @@ const STYLE_PROMPT: Record<string, string> = {
   cyberpunk: "赛博朋克漫画（霓虹配色，高对比，未来都市）",
   cartoon: "Q版卡通（圆润可爱，夸张表情，儿童绘本风格）",
 };
+
+function mockScript(input: string): ComicScript {
+  const title = input.slice(0, 12) || "未命名漫画";
+  const chars: ComicScriptCharacter[] = [
+    { name: "林小满", role: "protagonist", gender: "女", age: "少女", appearance: "黑长直发，琥珀色眼眸，清秀瓜子脸，红白配色古风长裙，腰间玉佩", personality: "机灵倔强" },
+    { name: "陈默", role: "supporting", gender: "男", age: "青年", appearance: "银白短发，冷峻剑眉，深蓝眼眸，玄色劲装，背一柄古剑", personality: "沉默寡言" },
+    { name: "苏晚晴", role: "villain", gender: "女", age: "青年", appearance: "紫发高马尾，丹凤眼，红唇，暗紫纱衣，手持折扇", personality: "腹黑高傲" },
+  ];
+  const mk = (id: string, sd: string, ch: string[], dlg = "", nar = "", side = "left"): ComicPanel => ({
+    scene_desc: sd, characters: ch, dialogue: dlg, narration: nar, bubble_side: side as any,
+  });
+  const scenes: ComicScene[] = [
+    { id: "s1", scene_desc: "云雾缭绕的青山之巅，晨光穿透云海", panels: [
+      mk("s1p1", "远景：云雾中的仙山，金色晨光照亮山峰，气势恢宏", ["林小满"], "", "传说…山巅之上，封印着上古神镜", "top"),
+      mk("s1p2", "中景：林小满背着行囊艰难攀爬石阶，脸上满是倔强", ["林小满"], "就算是万丈悬崖，我也要爬上去！", "", "left"),
+      mk("s1p3", "特写：林小满触碰石壁上一面古朴铜镜，镜面泛起涟漪金光", ["林小满"], "这镜子…在发光？", "", "right"),
+    ]},
+    { id: "s2", scene_desc: "古朴洞府内，铜镜悬浮空中散发出柔和光芒", panels: [
+      mk("s2p1", "全景：洞府中央铜镜悬浮，光芒中隐约浮现一个人影", ["林小满"], "你是谁？", "", "right"),
+      mk("s2p2", "中景：银发少年陈默从镜中走出，神情冷漠，打量四周", ["陈默"], "凡人，是你唤醒了我。", "", "left"),
+      mk("s2p3", "林小满惊讶后退，陈默伸手示意她别怕", ["林小满", "陈默"], "我是镜中器灵，可助你修行…但有代价。", "", "left"),
+    ]},
+    { id: "s3", scene_desc: "宗门广场，紫衣女子苏晚晴居高临下俯视众人", panels: [
+      mk("s3p1", "远景：宗门广场上人群攒动，苏晚晴立于高台，紫衣飘飘气场全开", ["苏晚晴"], "今日，我要取回属于我的东西。", "", "right"),
+      mk("s3p2", "特写：苏晚晴展开折扇，眼神凌厉扫过人群，定格在林小满身上", ["苏晚晴", "林小满"], "那面镜子…在你身上？", "", "left"),
+      mk("s3p3", "林小满下意识按住怀中铜镜，陈默在镜中低语警告", ["林小满", "陈默"], "别怕，有我在。", "", "top"),
+    ]},
+    { id: "s4", scene_desc: "黄昏山道，林小满狂奔逃离，身后有人影追来", panels: [
+      mk("s4p1", "中景：林小满在山道上奔跑，衣袂翻飞，神色紧张回望", ["林小满"], "快跑…绝不能让她抢走镜子！", "", "left"),
+      mk("s4p2", "远景：夕阳下，苏晚晴的身影出现在山道尽头，折扇轻摇，冷笑", ["苏晚晴"], "跑得掉吗？", "", "right"),
+      mk("s4p3", "特写：林小满紧抱铜镜，镜面闪烁，陈默的声音在耳边响起——危机时刻，镜中之力觉醒", ["林小满", "陈默"], "", "镜灵觉醒…第一话完？不，这才刚刚开始。", "top"),
+    ]},
+  ];
+  return { title, characters: chars, scenes };
+}
 
 /**
  * 生成漫画脚本（第一话）
@@ -75,6 +110,11 @@ export async function generateComicScript(
 
   const styleDesc = STYLE_PROMPT[style] || STYLE_PROMPT.manhua;
   const genreZh = GENRE_ZH[genre] || "玄幻";
+
+  // MOCK 模式：无 LLM key 时用于全流程联调
+  if (process.env.MOCK_SCRIPT === "1") {
+    return mockScript(input);
+  }
 
   const systemPrompt = `你是一位专业的漫画编剧和分镜师。根据用户提供的内容，创作一部${genreZh}题材的漫画第一话脚本。
 
