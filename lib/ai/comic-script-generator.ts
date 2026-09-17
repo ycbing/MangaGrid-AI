@@ -56,7 +56,15 @@ export const STYLE_PROMPT: Record<string, string> = {
 };
 
 function mockScript(input: string): ComicScript {
-  const title = input.slice(0, 12) || "未命名漫画";
+  // mock 标题：优先取书名号内文案，否则取第一个短句（≤12字，超长截断加省略号）
+  const title = (() => {
+    const t = input.trim();
+    const quoted = t.match(/《([^》]{2,12})》/);
+    if (quoted) return quoted[1];
+    const first = t.split(/[，。！？；\n]/)[0].trim();
+    if (first.length <= 12) return first || "未命名漫画";
+    return first.slice(0, 12) + "…";
+  })();
   const chars: ComicScriptCharacter[] = [
     { name: "林小满", role: "protagonist", gender: "女", age: "少女", appearance: "黑长直发，琥珀色眼眸，清秀瓜子脸，红白配色古风长裙，腰间玉佩", personality: "机灵倔强" },
     { name: "陈默", role: "supporting", gender: "男", age: "青年", appearance: "银白短发，冷峻剑眉，深蓝眼眸，玄色劲装，背一柄古剑", personality: "沉默寡言" },
