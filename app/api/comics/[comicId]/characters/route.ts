@@ -41,11 +41,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const stylePrompt = STYLE_PROMPT[comicRow[0].style || "manhua"] || STYLE_PROMPT.manhua;
     const results: { id: string; name: string; referenceImageUrl: string | null; status: string }[] = [];
 
-    for (const c of chars) {
+    // 角色数量少（3-6），直接全量并发
+    const genOne = async (c: any) => {
       // 已生成过的跳过
       if (c.referenceImageUrl) {
         results.push({ id: c.id, name: c.name, referenceImageUrl: c.referenceImageUrl, status: "skipped" });
-        continue;
+        return;
       }
 
       const prompt = `${c.appearance}。角色设定立绘，${stylePrompt}，半身像，正面朝向，居中构图，纯色简单背景，突出人物特征`;
@@ -53,9 +54,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       let imageUrl: string | null = null;
       try {
         if (MOCK_IMAGES) {
-          imageUrl = `https://placehold.co/768x1024/6C5CE7/white?text=${encodeURIComponent(c.name)}`;
+          imageUrl = `https://placehold.co/1024x1024/6C5CE7/white?text=${encodeURIComponent(c.name)}`;
         } else {
-          const generated = await generateImage(prompt, "anime", "768x1024" as any, {
+          const generated = await generateImage(prompt, "anime", "1024x1024" as any, {
             userId: session.user.id,
           });
           // 下载并上传 COS（私有桶）
@@ -80,7 +81,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         log.error(`角色参考图生成失败: ${c.name}`, err);
         results.push({ id: c.id, name: c.name, referenceImageUrl: null, status: `failed: ${err.message}` });
       }
-    }
+    };
+
+    await Promise.all(chars.map(genOne));
 
     const failed = results.filter((r) => r.status.startsWith("failed"));
     // 全部失败 → 退款提示（每张扣在循环里，失败未扣）

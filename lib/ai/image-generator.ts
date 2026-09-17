@@ -163,6 +163,13 @@ export async function generateImage(
 
     // 检查环境变量或模型配置，决定用哪个模型
     const model = (process.env.IMAGE_MODEL || "wan2.7-image").toLowerCase();
+    if (model.includes("qwen-image") || model.includes("qwen_image")) {
+      // qwen-image 系列（阿里通义万相 3.0）：同步调用，size 用 1024*1024 / 720*1280
+      return await generateWan27ImagePro(fullPrompt, {
+        size: isVertical ? "720*1280" : "1024*1024",
+        modelName: process.env.IMAGE_MODEL || "qwen-image-3.0",
+      });
+    }
     if (model.includes("wan2.7-image")) {
       // wan2.7-image 系列（含 pro）支持同步调用 + 2K/4K，效果好
       try {

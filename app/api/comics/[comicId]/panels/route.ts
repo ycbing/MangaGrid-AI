@@ -87,7 +87,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     let done = 0;
     let failed = 0;
 
-    for (const panel of targets) {
+    // 并发池：qwen 单图 ~50s，串行太慢；3 并发平衡速度与限流
+    const CONCURRENCY = Math.min(Number(process.env.PANEL_CONCURRENCY) || 2, 6);
+
+    const genOne = async (panel: any) => {
       // 标记生成中
       await db
         .update(comicPanels)
@@ -143,6 +146,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         results[panel.id] = { status: "failed", error: err.message };
         failed += 1;
       }
+    };
+
+    // 并发调度
+    for (let i = 0; i < targets.length; i += CONCURRENCY) {
+      const batch = targets.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(genOne));
+      log.info(`分格生图进度 ${Math.min(i + CONCURRENCY, targets.length)}/${targets.length}`, {
+        done,
+        failed,
+      });
     }
 
     const newStatus =

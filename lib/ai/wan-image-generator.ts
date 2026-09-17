@@ -186,7 +186,7 @@ export function imageSizeToWanx(size: string, isVertical: boolean = false): stri
 export async function generateWan27ImagePro(
   prompt: string,
   options?: {
-    size?: "1K" | "2K" | "4K"; // 默认 2K (2048x2048)
+    size?: string; // "1K" | "2K" | "4K"（wan2.7）或 "1024*1024" / "720*1280"（qwen-image）
     n?: number;  // 生成数量 1-4，默认 1
     style?: string;
     watermark?: boolean;
@@ -228,6 +228,51 @@ export async function generateWan27ImagePro(
 
   if (!response.ok) {
     const error = await response.text();
+    // 429 限流：退避重试（3s/10s/30s），最多 3 次
+    if (response.status === 429) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const waitMs = [3000, 10000, 30000][attempt - 1];
+        log.warn(`Wan2.7 Image throttled (429), retry ${attempt} in ${waitMs / 1000}s`, { model: modelName });
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        const retry = await fetch(
+          `${DASHSCOPE_BASE_URL}/api/v1/services/aigc/multimodal-generation/generation`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: modelName,
+              input: {
+                messages: [{
+                  role: "user",
+                  content: [{ text: prompt }],
+                }],
+              },
+              parameters: {
+                size: options?.size || "2K",
+                n: options?.n || 1,
+                watermark: options?.watermark ?? false,
+                thinking_mode: options?.thinkingMode ?? true,
+                ...(options?.style ? { style: options.style } : {}),
+              },
+            }),
+          }
+        );
+        if (retry.ok) {
+          const retryResult = await retry.json();
+          const retryUrl = retryResult.output?.choices?.[0]?.message?.content?.[0]?.image ||
+                           retryResult.output?.results?.[0]?.url || "";
+          if (retryUrl) {
+            log.info("Wan2.7 Image generated after retry", { model: modelName, url: retryUrl.substring(0, 60) });
+            return retryUrl;
+          }
+        }
+        const retryErr = await retry.text();
+        log.warn(`Retry ${attempt} still failing`, { status: retry.status, err: retryErr.substring(0, 120) });
+      }
+    }
     throw new Error(`Wan2.7 Image Pro error: ${response.status} - ${error}`);
   }
 
