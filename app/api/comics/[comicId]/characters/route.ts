@@ -87,7 +87,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const failed = results.filter((r) => r.status.startsWith("failed"));
     // 全部失败 → 退款提示（每张扣在循环里，失败未扣）
-    const status = failed.length === 0 ? "chars_ready" : comicRow[0].status;
+    const status = failed.length === 0 ? (comicRow[0].status === "panels_ready" ? "panels_ready" : "chars_ready") : comicRow[0].status;
     await db.update(comics).set({ status, updatedAt: new Date() }).where(eq(comics.id, comicId));
 
     return NextResponse.json({
