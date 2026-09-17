@@ -44,7 +44,7 @@ export default function SignInContent() {
           <Link href="/" className="flex items-center justify-center gap-2 mb-4">
             <Film className="h-6 w-6 text-emerald-400" />
             <span className="font-bold bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-              Shortify AI
+              漫格 MangaGrid
             </span>
           </Link>
           <CardTitle className="text-xl">登录</CardTitle>

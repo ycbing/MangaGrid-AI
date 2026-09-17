@@ -11,7 +11,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  outputFileTracingRoot: "/root/.openclaw/workspace/projects/shortify-ai",
 };
 
 export default nextConfig;

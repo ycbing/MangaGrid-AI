@@ -4,11 +4,11 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Shortify AI - AI短剧创作平台 | 从创意到成片只需5分钟",
-  description: "Shortify AI 是一站式 AI 短剧创作平台。输入创意，AI 自动生成剧本、分镜、配音和视频。支持悬疑、爱情、喜剧等多种类型，零门槛成为导演。",
+  title: "漫格 MangaGrid - AI漫画创作平台 | 从网文到条漫只需5分钟",
+  description: "漫格 MangaGrid 是一站式 AI 漫画创作平台。输入创意或小说章节，AI 自动生成漫画脚本、角色卡、分镜生图和对话气泡。支持玄幻、都市、古风等多种题材，零门槛成为漫画家。",
   openGraph: {
-    title: "Shortify AI - AI短剧创作平台",
-    description: "输入创意，AI 自动生成剧本、分镜、配音和视频。零门槛成为导演。",
+    title: "漫格 MangaGrid - AI漫画创作平台",
+    description: "输入创意或小说章节，AI 自动生成漫画脚本、角色卡、分镜生图和对话气泡。零门槛成为漫画家。",
     type: "website",
     locale: "zh_CN",
   },

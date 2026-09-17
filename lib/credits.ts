@@ -1,5 +1,5 @@
 // ============================================
-// Shortify AI - Credits System
+// 漫格 MangaGrid - Credits System
 // ============================================
 
 import { db } from "@/lib/db";

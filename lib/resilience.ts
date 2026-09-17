@@ -1,5 +1,5 @@
 // ============================================
-// Shortify AI - Resilience Utilities
+// 漫格 MangaGrid - Resilience Utilities
 // ============================================
 // Unified retry, timeout, and concurrency control
 

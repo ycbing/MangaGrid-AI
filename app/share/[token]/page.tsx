@@ -240,7 +240,7 @@ export default function SharePage() {
         <div className="mt-6 pt-4 border-t border-zinc-800 text-center">
           <div className="flex items-center justify-center gap-2 text-zinc-500">
             <Sparkles className="w-4 h-4" />
-            <span className="text-xs">由 Shortify AI 智能生成</span>
+            <span className="text-xs">由 漫格 MangaGrid 智能生成</span>
           </div>
           <p className="text-xs text-zinc-600 mt-1">
             AI 驱动的短剧创作平台

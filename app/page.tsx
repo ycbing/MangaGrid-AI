@@ -263,11 +263,11 @@ export default function HomePage() {
         <div className="mx-auto max-w-3xl">
           <div className="text-center mb-10 sm:mb-12">
             <h2 className="text-xl sm:text-3xl font-bold mb-3 sm:mb-4">❓ 常见问题</h2>
-            <p className="text-sm sm:text-base text-muted-foreground">关于 Shortify AI 你可能想知道的</p>
+            <p className="text-sm sm:text-base text-muted-foreground">关于 漫格 MangaGrid 你可能想知道的</p>
           </div>
           <Accordion type="single" collapsible className="space-y-3">
             {[
-              { q: "Shortify AI 是免费的吗？", a: "注册即送 200 积分，足够体验完整创作流程。之后每项操作会消耗少量积分，比如生图每张约 0.5 积分、配音每集约 2 积分。你可以通过邀请好友或充值获取更多积分。" },
+              { q: "漫格 MangaGrid 是免费的吗？", a: "注册即送 200 积分，足够体验完整创作流程。之后每项操作会消耗少量积分，比如生图每张约 0.5 积分、配音每集约 2 积分。你可以通过邀请好友或充值获取更多积分。" },
               { q: "生成一个短剧需要多久？", a: "剧本生成约 10-30 秒，分镜图片每张 5-15 秒（取决于集数），配音每集 3-8 秒。一部 3 集短剧从创意到成片通常 2-5 分钟即可完成。" },
               { q: "可以自定义角色外观吗？", a: "可以！在剧本编辑页面，你可以为每个角色编写外貌描述（发型、服装、体型等），AI 生图时会参考这些描述，确保不同镜头中角色外观一致。" },
               { q: "支持哪些视频风格？", a: "目前支持写实、动漫、水墨、赛博朋克四种核心风格。同时你可以通过文字描述自定义场景氛围，AI 会根据你的风格选择和描述生成匹配的分镜画面。" },

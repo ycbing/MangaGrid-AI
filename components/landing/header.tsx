@@ -16,7 +16,7 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2">
           <Film className="h-6 w-6 text-emerald-400" />
           <span className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-            Shortify AI
+            漫格 MangaGrid
           </span>
         </Link>
 

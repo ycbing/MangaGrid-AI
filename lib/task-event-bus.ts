@@ -1,5 +1,5 @@
 // ============================================
-// Shortify AI - Task Event Bus (in-process pub/sub)
+// 漫格 MangaGrid - Task Event Bus (in-process pub/sub)
 // ============================================
 // Lightweight event emitter for broadcasting task progress updates
 // to WebSocket connections. No Redis dependency needed for single-server.

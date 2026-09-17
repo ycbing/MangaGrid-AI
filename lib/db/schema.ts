@@ -1,5 +1,5 @@
 // ============================================
-// Shortify AI - Database Schema
+// 漫格 MangaGrid - Database Schema
 // ============================================
 
 import {

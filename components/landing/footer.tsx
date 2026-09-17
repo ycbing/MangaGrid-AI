@@ -9,7 +9,7 @@ export function Footer() {
             <div className="flex items-center gap-2 mb-4">
               <Film className="h-5 w-5 text-emerald-400" />
               <span className="font-bold bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                Shortify AI
+                漫格 MangaGrid
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -35,7 +35,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t border-border/50 pt-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Shortify AI. All rights reserved.
+          © {new Date().getFullYear()} 漫格 MangaGrid. All rights reserved.
         </div>
       </div>
     </footer>

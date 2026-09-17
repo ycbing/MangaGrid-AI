@@ -1,5 +1,5 @@
 // ============================================
-// Shortify AI - Structured Logger
+// 漫格 MangaGrid - Structured Logger
 // ============================================
 
 type LogLevel = "debug" | "info" | "warn" | "error";
