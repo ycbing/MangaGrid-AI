@@ -37,36 +37,67 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 }
 
-/* Dark theme with emerald/teal accent */
+/* 漫格 MangaGrid - 亮色主题 + AI 紫品牌色 */
 :root {
-  --radius: 0.625rem;
-  --background: 0 0% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 6%;
-  --card-foreground: 0 0% 98%;
-  --popover: 0 0% 6%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 160 84% 39%;
-  --primary-foreground: 0 0% 0%;
-  --secondary: 0 0% 12%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 12%;
-  --muted-foreground: 0 0% 63.9%;
-  --accent: 160 60% 15%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
+  --radius: 0.75rem;
+  --background: 263 100% 99%; /* 极浅紫白 */
+  --foreground: 262 45% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 262 45% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 262 45% 12%;
+  --primary: 262 83% 58%; /* AI 紫 #7C3AED */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 262 50% 96%;
+  --secondary-foreground: 262 45% 20%;
+  --muted: 262 35% 95%;
+  --muted-foreground: 262 15% 45%;
+  --accent: 190 90% 45%; /* 青绿点缀 #06B6D4 */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 262 30% 92%;
+  --input: 262 30% 92%;
+  --ring: 262 83% 58%;
+  --sidebar: 262 45% 98%;
+  --sidebar-foreground: 262 45% 15%;
+  --sidebar-primary: 262 83% 58%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 262 50% 95%;
+  --sidebar-accent-foreground: 262 45% 20%;
+  --sidebar-border: 262 30% 92%;
+  --sidebar-ring: 262 83% 58%;
+}
+
+/* 暗色变体（紫色系，备用） */
+.dark {
+  --background: 262 45% 6%;
+  --foreground: 262 30% 96%;
+  --card: 262 40% 9%;
+  --card-foreground: 262 30% 96%;
+  --popover: 262 40% 9%;
+  --popover-foreground: 262 30% 96%;
+  --primary: 262 83% 62%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 262 35% 14%;
+  --secondary-foreground: 262 30% 96%;
+  --muted: 262 35% 14%;
+  --muted-foreground: 262 20% 60%;
+  --accent: 190 90% 50%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 62% 40%;
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 14.9%;
-  --input: 0 0% 14.9%;
-  --ring: 160 84% 39%;
-  --sidebar: 0 0% 5%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 160 84% 39%;
-  --sidebar-primary-foreground: 0 0% 0%;
-  --sidebar-accent: 160 60% 15%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 14.9%;
-  --sidebar-ring: 160 84% 39%;
+  --border: 262 30% 16%;
+  --input: 262 30% 16%;
+  --ring: 262 83% 62%;
+  --sidebar: 262 40% 8%;
+  --sidebar-foreground: 262 30% 96%;
+  --sidebar-primary: 262 83% 62%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 262 35% 14%;
+  --sidebar-accent-foreground: 262 30% 96%;
+  --sidebar-border: 262 30% 16%;
+  --sidebar-ring: 262 83% 62%;
 }
 
 @layer base {
@@ -99,3 +130,15 @@
 .bg-gradient-dark {
   background: linear-gradient(135deg, #0a0a0a 0%, #052e16 50%, #0a0a0a 100%);
 }
+
+/* Landing 动画 */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 5s ease-in-out infinite; }
+.animate-float-delay { animation: float 5s ease-in-out 2.5s infinite; }

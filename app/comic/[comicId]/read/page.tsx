@@ -72,7 +72,7 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
       </div>
     );
   }
@@ -81,7 +81,7 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-gray-900 text-gray-300">
         <p>作品不存在</p>
-        <Link href="/dashboard" className="text-indigo-400">返回工作台</Link>
+        <Link href="/dashboard" className="text-violet-400">返回工作台</Link>
       </div>
     );
   }
@@ -98,7 +98,7 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
             <Link href={`/comic/${comicId}`} className="text-gray-400 hover:text-white shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <BookOpen className="w-5 h-5 text-indigo-400 shrink-0" />
+            <BookOpen className="w-5 h-5 text-violet-400 shrink-0" />
             <div className="min-w-0">
               <h1 className="text-white font-semibold truncate text-sm">{comic.title}</h1>
               <p className="text-gray-400 text-xs">{chapters[0]?.title || "第一话"}</p>
@@ -113,7 +113,7 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
         {allPanels.length === 0 ? (
           <div className="text-center py-32 text-gray-400">
             <p className="mb-3">还没有完成的分镜图</p>
-            <Link href={`/comic/${comicId}`} className="text-indigo-400 underline">
+            <Link href={`/comic/${comicId}`} className="text-violet-400 underline">
               去生成 →
             </Link>
           </div>

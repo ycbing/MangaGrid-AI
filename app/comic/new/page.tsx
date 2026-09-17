@@ -74,14 +74,14 @@ export default function CreateComicPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50/50 to-white">
+    <div className="min-h-screen bg-gradient-to-b to-violet-50/50 to-white">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-gray-800">
             <ArrowLeft className="w-4 h-4" /> 返回
           </Link>
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
               <BookOpen className="w-4.5 h-4.5 text-white" />
             </div>
             <span className="font-bold">漫格 MangaGrid</span>
@@ -105,9 +105,9 @@ export default function CreateComicPage() {
                 setSourceText(t.text);
                 setGenre(t.genre);
               }}
-              className="text-left p-3.5 rounded-xl border border-dashed hover:border-indigo-400 hover:bg-indigo-50/50 transition text-sm text-gray-600"
+              className="text-left p-3.5 rounded-xl border border-dashed hover:border-violet-400 hover:bg-violet-50/50 transition text-sm text-gray-600"
             >
-              <Sparkles className="w-4 h-4 inline mr-1.5 text-indigo-400" />
+              <Sparkles className="w-4 h-4 inline mr-1.5 text-violet-400" />
               {t.text}
             </button>
           ))}
@@ -122,7 +122,7 @@ export default function CreateComicPage() {
             value={sourceText}
             onChange={(e) => setSourceText(e.target.value)}
             placeholder="例：输入你小说的开头章节，或一句话创意：『小职员意外获得读心术，发现老板的秘密…』"
-            className="w-full h-40 rounded-xl border p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            className="w-full h-40 rounded-xl border p-4 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
           />
           <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
             <span>AI 将基于此内容创作漫画第一话（约 20 格）</span>
@@ -141,8 +141,8 @@ export default function CreateComicPage() {
                   onClick={() => setGenre(g.id)}
                   className={`px-3 py-1.5 rounded-full text-sm border transition ${
                     genre === g.id
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                      ? "bg-violet-600 text-white border-violet-600"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-violet-300"
                   }`}
                 >
                   {g.emoji} {g.name}
@@ -178,7 +178,7 @@ export default function CreateComicPage() {
                 onClick={() => setLayoutType("strip")}
                 className={`flex-1 px-3 py-2.5 rounded-xl border text-sm transition ${
                   layoutType === "strip"
-                    ? "bg-indigo-600 text-white border-indigo-600"
+                    ? "bg-violet-600 text-white border-violet-600"
                     : "bg-white text-gray-600 border-gray-200"
                 }`}
               >
@@ -188,7 +188,7 @@ export default function CreateComicPage() {
                 onClick={() => setLayoutType("page")}
                 className={`flex-1 px-3 py-2.5 rounded-xl border text-sm transition ${
                   layoutType === "page"
-                    ? "bg-indigo-600 text-white border-indigo-600"
+                    ? "bg-violet-600 text-white border-violet-600"
                     : "bg-white text-gray-600 border-gray-200"
                 }`}
               >
@@ -201,7 +201,7 @@ export default function CreateComicPage() {
         <button
           onClick={submit}
           disabled={submitting}
-          className="mt-6 w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-60 transition"
+          className="mt-6 w-full bg-gradient-to-r to-violet-600 to-purple-600 text-white py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-60 transition"
         >
           {submitting ? (
             <>

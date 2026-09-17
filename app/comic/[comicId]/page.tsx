@@ -190,7 +190,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
       </div>
     );
   }
@@ -199,7 +199,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-gray-500">作品不存在或已删除</p>
-        <button onClick={() => router.push("/dashboard")} className="text-indigo-600">
+        <button onClick={() => router.push("/dashboard")} className="text-violet-600">
           返回工作台
         </button>
       </div>
@@ -216,7 +216,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
             <button onClick={() => router.push("/dashboard")} className="text-gray-500 hover:text-gray-800 shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <BookOpen className="w-5 h-5 text-indigo-600 shrink-0" />
+            <BookOpen className="w-5 h-5 text-violet-600 shrink-0" />
             <div className="min-w-0">
               <h1 className="font-bold truncate">{comic.title}</h1>
               <p className="text-xs text-gray-400">
@@ -229,7 +229,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
               <button
                 onClick={() => genPanels()}
                 disabled={genPanelsLoading || pendingCount === 0}
-                className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-60 transition"
+                className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 disabled:opacity-60 transition"
               >
                 {genPanelsLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -307,7 +307,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
         {/* 分格 */}
         <section className="bg-white rounded-2xl border p-5">
           <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <ImageIcon className="w-4.5 h-4.5 text-indigo-600" /> 分镜格子
+            <ImageIcon className="w-4.5 h-4.5 text-violet-600" /> 分镜格子
             <span className="text-xs font-normal text-gray-400">每格 = 一张漫画图 + 对话气泡</span>
           </h2>
 
@@ -369,7 +369,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
                       <p className="text-[11px] text-gray-600 line-clamp-2">{p.sceneDesc}</p>
                       <div className="flex items-start gap-1 mt-1 text-[10px]">
                         {(p.dialogue || p.narration) && (
-                          <MessageCircle className="w-3 h-3 text-indigo-400 mt-0.5 shrink-0" />
+                          <MessageCircle className="w-3 h-3 text-violet-400 mt-0.5 shrink-0" />
                         )}
                         <p className="text-gray-500 line-clamp-1">
                           {p.dialogue || p.narration || "无台词"}

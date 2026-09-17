@@ -94,32 +94,32 @@ export default function DashboardPage() {
     const base = "px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5";
     if (c.status === "script_ready" || c.status === "draft" || c.status === "generating" || c.status === "error") {
       return (
-        <Link href={`/comic/${c.id}`} className={`${base} bg-indigo-600 text-white hover:bg-indigo-700`}>
+        <Link href={`/comic/${c.id}`} className={`${base} bg-violet-600 text-white hover:bg-violet-700`}>
           编辑创作 <ChevronRight className="w-4 h-4" />
         </Link>
       );
     }
     return (
-      <Link href={`/comic/${c.id}`} className={`${base} bg-indigo-600 text-white hover:bg-indigo-700`}>
+      <Link href={`/comic/${c.id}`} className={`${base} bg-violet-600 text-white hover:bg-violet-700`}>
         继续创作 <ChevronRight className="w-4 h-4" />
       </Link>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50/50 to-white">
+    <div className="min-h-screen bg-gradient-to-b to-violet-50/50 to-white">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
               <BookOpen className="w-4.5 h-4.5 text-white" />
             </div>
             <span className="font-bold text-lg">漫格 MangaGrid</span>
           </Link>
           <button
             onClick={() => router.push("/comic/new")}
-            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+            className="flex items-center gap-1.5 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 transition"
           >
             <Plus className="w-4 h-4" /> 新建漫画
           </button>
@@ -137,16 +137,16 @@ export default function DashboardPage() {
 
         {loading ? (
           <div className="flex justify-center py-24">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
           </div>
         ) : comics.length === 0 ? (
           <div className="text-center py-24 bg-white rounded-2xl border border-dashed">
-            <Sparkles className="w-12 h-12 text-indigo-300 mx-auto mb-4" />
+            <Sparkles className="w-12 h-12 text-violet-300 mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">还没有作品</h2>
             <p className="text-gray-500 mb-6">输入一个创意或粘贴小说章节，AI 帮你画出第一话</p>
             <button
               onClick={() => router.push("/comic/new")}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700 transition"
+              className="bg-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-violet-700 transition"
             >
               开始创作 →
             </button>
@@ -166,8 +166,8 @@ export default function DashboardPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={cover} alt={c.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
-                        <BookOpen className="w-10 h-10 text-indigo-200" />
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br to-violet-50 to-purple-50">
+                        <BookOpen className="w-10 h-10 text-violet-200" />
                       </div>
                     )}
                     <span className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium ${st.cls}`}>
