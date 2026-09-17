@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "zh_CN",
   },
-  keywords: ["AI短剧", "短剧创作", "AI编剧", "AI分镜", "AI配音", "视频创作"],
+  keywords: ["AI漫画", "漫画创作", "条漫生成", "网文漫改", "AI分镜", "漫画工具"],
 };
 
 export const viewport: Viewport = {

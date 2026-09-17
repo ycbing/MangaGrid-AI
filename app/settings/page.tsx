@@ -42,19 +42,15 @@ interface CreditInfo {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  script: "📝 生成剧本",
-  storyboard: "🎨 生成分镜",
-  voiceover: "🎙️ 生成配音",
-  compose: "🎬 合成视频",
-  video: "🤖 AI 视频生成",
+  comicScript: "📝 生成漫画脚本",
+  comicCharRef: "🎭 角色参考图",
+  comicPanel: "🖼️ 漫画分格生图",
 };
 
 const COST_DISPLAY = [
-  { type: "生成剧本", cost: 10, icon: "📝" },
-  { type: "分镜图片（每集）", cost: 5, icon: "🎨" },
-  { type: "配音（每集）", cost: 5, icon: "🎙️" },
-  { type: "视频合成（每集）", cost: 5, icon: "🎬" },
-  { type: "AI 视频生成（每镜头）", cost: 20, icon: "🤖" },
+  { type: "生成漫画脚本", cost: 2, icon: "📝" },
+  { type: "角色参考图（每张）", cost: 2, icon: "🎭" },
+  { type: "漫画分格生图（每格）", cost: 1, icon: "🖼️" },
 ];
 
 export default function SettingsPage() {
@@ -228,7 +224,7 @@ export default function SettingsPage() {
                 {logs.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
                     <p>暂无使用记录</p>
-                    <p className="text-xs mt-1">开始创作短剧后，使用记录会显示在这里</p>
+                    <p className="text-xs mt-1">开始创作漫画后，使用记录会显示在这里</p>
                   </div>
                 ) : (
                   <div className="space-y-1">
