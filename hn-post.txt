@@ -1,0 +1,30 @@
+## Hacker News Show HN 投稿
+
+### 标题（Title）
+
+```
+Show HN: Shortify AI – Turn a 1-line idea into a short drama video (open-source)
+```
+
+### 描述文字（第一段评论）
+
+I built an open-source pipeline that takes a creative prompt like "a time-traveling maid lands in a modern office" and outputs a complete short drama — script, illustrated storyboard, multi-voice dubbing, and 1080p video.
+
+**How it works (4-stage pipeline):**
+
+1. **AI Scriptwriter** (GLM / DeepSeek) → generates structured script with characters, scenes, and shots
+2. **Image Generator** (Wan2.7 / CogView) → creates an illustration per shot
+3. **Multi-voice TTS** (iFlytek / Edge-TTS) → assigns male/female/narrator voices per character
+4. **Video Compositor** (FFmpeg) → Ken Burns camera effects + subtitles + BGM → final video
+
+**The hard part:** AI video models fail ~10-15% of the time. A single failed shot used to produce a black screen that ruined the whole episode. The fix was a three-tier fallback that guarantees zero black screens.
+
+**Tech:** Next.js 16, FFmpeg, PostgreSQL, multi-provider AI (Zhipu, DashScope, iFlytek)
+
+**Try it:** npm install → configure GLM_API_KEY → npx tsx scripts/full-pipeline.ts
+
+GitHub: https://github.com/ycbing/Shortify-AI
+Demo video: https://craftmind.cn/api/uploads/cos/ca5472e9-f9ea-4c61-9d29-9e7cbc69aaf0%2Fvideos%2Fepisode-1.mp4
+Blog post: https://dev.to/ycbing/i-built-an-ai-studio-that-turns-1-line-of-text-into-a-5-minute-short-drama-1pho-temp-slug-5298142
+
+Would love feedback — especially from folks building AI video pipelines.
