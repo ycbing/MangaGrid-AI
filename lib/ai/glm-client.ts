@@ -100,6 +100,7 @@ export async function chatCompletionJSON<T>(
   options?: {
     model?: string;
     temperature?: number;
+    userId?: string;
   }
 ): Promise<T> {
   const response = await withTimeout(

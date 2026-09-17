@@ -19,6 +19,10 @@ export const CREDIT_COSTS = {
   video: 20,         // AI 视频生成（每个镜头）
   narration: 5,      // 短视频解说生成
   characterReference: 1,  // 角色参考图生成
+  // 漫画模块（漫格）
+  comicScript: 2,    // 生成漫画脚本
+  comicCharRef: 2,   // 角色参考图（每张）
+  comicPanel: 1,     // 漫画分格生图（每格）
 } as const;
 
 export type CreditType = keyof typeof CREDIT_COSTS;
@@ -32,6 +36,9 @@ export const CREDIT_LABELS: Record<CreditType, string> = {
   video: "AI 视频生成",
   narration: "短视频解说",
   characterReference: "角色参考图生成",
+  comicScript: "生成漫画脚本",
+  comicCharRef: "角色参考图",
+  comicPanel: "漫画分格生图",
 };
 
 /**
