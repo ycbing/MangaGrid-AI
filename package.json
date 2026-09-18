@@ -2,22 +2,23 @@
   "name": "manga-ai",
   "version": "0.1.0",
   "private": true,
-  "description": "AI-powered short drama creation platform. Generate scripts, storyboards, voiceovers, and videos from a single creative prompt.",
-  "license": "MIT",
-  "author": "ycbing",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ycbing/Shortify-AI"
+    "url": "https://github.com/ycbing/MangaGrid-AI.git"
   },
+  "license": "MIT",
+  "author": "ycbing",
   "keywords": [
     "ai",
-    "short-drama",
-    "video-generation",
+    "manga",
+    "comic",
+    "漫画",
+    "网文漫改",
+    "条漫",
     "nextjs",
-    "ffmpeg",
-    "text-to-speech",
-    "cogview",
-    "cogvideo"
+    "drizzle",
+    "qwen-image",
+    "glm"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -56,10 +57,13 @@
     "cos-nodejs-sdk-v5": "^2.15.4",
     "drizzle-orm": "^0.45.2",
     "edge-tts": "^1.0.1",
+    "image-size": "^2.0.4",
     "lucide-react": "^1.7.0",
     "next": "16.2.2",
     "next-auth": "^5.0.0-beta.30",
     "next-themes": "^0.4.6",
+    "nodemailer": "^7.0.13",
+    "pdfkit": "^0.20.2",
     "pg": "^8.20.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -74,6 +78,8 @@
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
@@ -84,5 +90,6 @@
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "description": "AI 漫画创作平台：网文一键漫改，AI 编剧分镜 + 角色卡 + 批量生图 + 中文气泡，生成条漫/页漫。"
 }

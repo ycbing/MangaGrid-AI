@@ -7,6 +7,7 @@ import { INITIAL_USER_CREDITS } from "@/lib/constants";
 import { registerSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limiter";
 import { createLogger } from "@/lib/logger";
+import { createToken, sendAuthMail } from "@/lib/services/mail";
 
 const log = createLogger("auth-api");
 
@@ -69,10 +70,21 @@ export async function POST(request: NextRequest) {
     // Send verification email (non-blocking)
 
 
+    let verificationLink: string | null = null;
+    try {
+      const token = await createToken(email, "verify_email");
+      verificationLink = await sendAuthMail(email, "verify_email", token);
+    } catch (mailError) {
+      log.error("Failed to send verification email", {
+        error: mailError instanceof Error ? mailError.message : String(mailError),
+      });
+    }
+
     return NextResponse.json({
       message: "注册成功，请查收验证邮件",
       userId,
       email,
+      verificationLink,
     });
   } catch (error) {
     log.error("Registration failed", { error: error instanceof Error ? error.message : String(error) });

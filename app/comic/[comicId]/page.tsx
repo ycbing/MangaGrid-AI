@@ -14,8 +14,25 @@ import {
   User,
   ImageIcon,
   MessageCircle,
+  Pencil,
+  ArrowUp,
+  ArrowDown,
+  Save,
+  Plus,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Character {
   id: string;
@@ -73,7 +90,9 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
   const [genCharsLoading, setGenCharsLoading] = useState(false);
   const [genPanelsLoading, setGenPanelsLoading] = useState(false);
   const [retryingPanel, setRetryingPanel] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [pollActive, setPollActive] = useState(false);
+  const [pollKind, setPollKind] = useState<"chars" | "panels" | null>(null);
+  const pollStartRef = useRef(0);
 
   const load = useCallback(async () => {
     try {
@@ -83,6 +102,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
         setComic(d.comic);
         setCharacters(d.characters || []);
         setChapters(d.chapters || []);
+        return d;
       } else {
         toast.error(d.error || "加载失败");
       }
@@ -91,26 +111,45 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
     } finally {
       setLoading(false);
     }
+    return null;
   }, [comicId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // 生成中轮询
+  const stopPolling = useCallback(() => {
+    setPollActive(false);
+    setPollKind(null);
+  }, []);
+
+  // 异步任务轮询：POST 立即返回后按类型轮询，任务完成(done/failed)或超时自动停止
   useEffect(() => {
-    const isBusy = genCharsLoading || genPanelsLoading || retryingPanel;
-    if (isBusy && !pollRef.current) {
-      pollRef.current = setInterval(load, 3000);
-    }
-    if (!isBusy && pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [genCharsLoading, genPanelsLoading, retryingPanel, load]);
+    if (!pollActive || !pollKind) return;
+    const CHAR_TIMEOUT = 150000;
+    const t = setInterval(async () => {
+      const d = await load();
+      if (!d) return;
+      if (pollKind === "panels") {
+        const panels = ((d.chapters as any[]) || []).flatMap((c: any) => c.panels);
+        const stillBusy = panels.some((p: any) => ["generating", "pending", "failed"].includes(p.status));
+        if (!stillBusy) {
+          toast.success("全部分格生图完成");
+          stopPolling();
+        }
+      } else if (pollKind === "chars") {
+        const chars = d.characters || [];
+        const allLocked = chars.length > 0 && chars.every((c: any) => c.referenceImageUrl);
+        if (allLocked) {
+          toast.success("角色参考图已全部锁定");
+          stopPolling();
+        } else if (Date.now() - pollStartRef.current > CHAR_TIMEOUT) {
+          stopPolling();
+        }
+      }
+    }, 3000);
+    return () => clearInterval(t);
+  }, [pollActive, pollKind, load, stopPolling]);
 
   const toImgUrl = (p: string | null) => {
     if (!p) return null;
@@ -129,8 +168,11 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
     try {
       const r = await fetch(`/api/comics/${comicId}/characters`, { method: "POST" });
       const d = await r.json();
-      if (d.summary) {
-        toast.success(`角色参考图完成：${d.summary.done}/${d.summary.total}`);
+      if (r.ok && d.started) {
+        toast.success(d.message || "已开始生成角色参考图");
+        pollStartRef.current = Date.now();
+        setPollKind("chars");
+        setPollActive(true);
         await load();
       } else {
         toast.error(d.error || "生成失败");
@@ -151,8 +193,11 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
         body: JSON.stringify(panelIds ? { panelIds } : {}),
       });
       const d = await r.json();
-      if (d.summary) {
-        toast.success(`生图完成：${d.summary.done}/${d.summary.total}`);
+      if (r.ok && d.started) {
+        toast.success(d.message || "已开始生成分格");
+        pollStartRef.current = Date.now();
+        setPollKind("panels");
+        setPollActive(true);
         await load();
       } else {
         toast.error(d.error || "生成失败");
@@ -173,8 +218,15 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
         body: JSON.stringify({ panelIds: [panelId] }),
       });
       const d = await r.json();
-      if (d.summary) toast.success("重新生成完成");
-      await load();
+      if (r.ok && d.started) {
+        toast.success(d.message || "已开始重新生成");
+        pollStartRef.current = Date.now();
+        setPollKind("panels");
+        setPollActive(true);
+        await load();
+      } else {
+        toast.error(d.error || "重试失败");
+      }
     } catch {
       toast.error("重试失败");
     } finally {
@@ -187,6 +239,103 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
   const pendingCount = allPanels.filter((p) => p.status === "pending" || p.status === "failed").length;
   const failedCount = allPanels.filter((p) => p.status === "failed").length;
   const charDone = characters.filter((c) => c.referenceImageUrl).length;
+
+  // ---- 分格编辑状态 ----
+  const [editPanel, setEditPanel] = useState<Panel | null>(null);
+  const [editForm, setEditForm] = useState({ sceneDesc: "", dialogue: "", narration: "", bubbleSide: "bottom" });
+  const [editing, setEditing] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [continueOpen, setContinueOpen] = useState(false);
+  const [continueText, setContinueText] = useState("");
+  const [continuing, setContinuing] = useState(false);
+
+  const openEdit = (p: Panel) => {
+    setEditPanel(p);
+    setEditForm({
+      sceneDesc: p.sceneDesc || "",
+      dialogue: p.dialogue || "",
+      narration: p.narration || "",
+      bubbleSide: p.bubbleSide || "bottom",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editPanel) return;
+    setEditing(true);
+    try {
+      const r = await fetch(`/api/comics/${comicId}/panels/${editPanel.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const d = await r.json();
+      if (r.ok && d.ok) {
+        toast.success("分格已更新");
+        setEditPanel(null);
+        await load();
+      } else {
+        toast.error(d.error || "保存失败");
+      }
+    } catch {
+      toast.error("保存失败");
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  // 章节内上移/下移一格
+  const movePanel = async (ch: Chapter, panelId: string, dir: -1 | 1) => {
+    if (reordering) return;
+    const idx = ch.panels.findIndex((p) => p.id === panelId);
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= ch.panels.length) return;
+    const ids = ch.panels.map((p) => p.id);
+    [ids[idx], ids[target]] = [ids[target], ids[idx]];
+    setReordering(true);
+    try {
+      const r = await fetch(`/api/comics/${comicId}/panels/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chapterId: ch.id, panelIds: ids }),
+      });
+      const d = await r.json();
+      if (r.ok && d.ok) {
+        toast.success("顺序已更新");
+        await load();
+      } else {
+        toast.error(d.error || "重排失败");
+      }
+    } catch {
+      toast.error("重排失败");
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const doContinue = async () => {
+    setContinuing(true);
+    try {
+      const r = await fetch(`/api/comics/${comicId}/chapters`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ continuation: continueText.trim() || undefined }),
+      });
+      const d = await r.json();
+      if (r.ok && d.chapterId) {
+        toast.success(`第 ${d.chapterNumber} 话《${d.title}》已生成（${d.panelCount} 格）`);
+        setContinueOpen(false);
+        setContinueText("");
+        await load();
+      } else {
+        toast.error(d.error || "续写失败");
+        if (d.code === "INSUFFICIENT_CREDITS") router.push("/settings");
+      }
+    } catch {
+      toast.error("网络错误，请重试");
+    } finally {
+      setContinuing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -210,14 +359,16 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
   const cover = toImgUrl(comic.coverUrl);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-app">
       <header className="sticky top-0 z-20 bg-white border-b">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => router.push("/dashboard")} className="text-gray-500 hover:text-gray-800 shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <BookOpen className="w-5 h-5 text-violet-600 shrink-0" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-md shadow-violet-200 shrink-0">
+              <BookOpen className="w-4 h-4 text-white" />
+            </div>
             <div className="min-w-0">
               <h1 className="font-bold truncate">{comic.title}</h1>
               <p className="text-xs text-gray-400">
@@ -229,10 +380,10 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
             {pendingCount > 0 && (
               <button
                 onClick={() => genPanels()}
-                disabled={genPanelsLoading || pendingCount === 0}
-                className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 disabled:opacity-60 transition"
+                disabled={genPanelsLoading || pollActive || pendingCount === 0}
+                className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-xl text-sm font-medium hover:bg-violet-700 hover:-translate-y-0.5 disabled:opacity-60 transition-all shadow-md shadow-violet-200"
               >
-                {genPanelsLoading ? (
+                {genPanelsLoading || (pollActive && pollKind === "panels") ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <ImageIcon className="w-4 h-4" />
@@ -240,6 +391,14 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
                 生成全部分格（{pendingCount} 张 · {pendingCount} 积分）
               </button>
             )}
+            <button
+              onClick={() => setContinueOpen(true)}
+              disabled={characters.length === 0}
+              title={characters.length === 0 ? "请先完成第一话并锁定角色" : "为这部作品续写下一话（消耗 2 积分）"}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-violet-50 text-violet-600 border border-violet-200 hover:bg-violet-100 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:bg-violet-50 transition"
+            >
+              <Plus className="w-4 h-4" /> 续写下一话
+            </button>
             <Link
               href={`/comic/${comicId}/read`}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition ${
@@ -256,18 +415,18 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* 角色卡 */}
-        <section className="bg-white rounded-2xl border p-5">
+        <section className="bg-white rounded-2xl border border-violet-100/70 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold flex items-center gap-2">
-              <User className="w-4.5 h-4.5 text-purple-600" /> 角色卡
+              <User className="w-5 h-5 text-violet-600" /> 角色卡
               <span className="text-xs font-normal text-gray-400">锁定形象 → 跨格一致</span>
             </h2>
             <button
               onClick={genCharacters}
-              disabled={genCharsLoading || characters.length === 0 || (charDone === characters.length && characters.length > 0)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50 transition"
+              disabled={genCharsLoading || characters.length === 0 || (charDone === characters.length && characters.length > 0) || (pollActive && pollKind === "chars")}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700 disabled:opacity-50 transition"
             >
-              {genCharsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {genCharsLoading || (pollActive && pollKind === "chars") ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               {charDone === characters.length && characters.length > 0 ? "已全部锁定" : `生成参考图（${characters.length - charDone} 张）`}
             </button>
           </div>
@@ -279,7 +438,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
               {characters.map((c) => {
                 const refImg = toImgUrl(c.referenceImageUrl);
                 return (
-                  <div key={c.id} className="flex gap-3 rounded-xl border bg-gray-50/50 p-3">
+                  <div key={c.id} className="flex gap-3 rounded-xl border bg-gray-50/50 p-3 hover:shadow-md hover:-translate-y-0.5 hover:border-violet-200 transition-all">
                     <div className="w-16 h-20 rounded-lg overflow-hidden bg-gray-200 shrink-0 flex items-center justify-center">
                       {refImg ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -306,10 +465,10 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
         </section>
 
         {/* 分镜 */}
-        <section className="bg-white rounded-2xl border p-5">
+        <section className="bg-white rounded-2xl border border-violet-100/70 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold flex items-center gap-2">
-              <ImageIcon className="w-4.5 h-4.5 text-violet-600" /> 分镜格子
+              <ImageIcon className="w-5 h-5 text-violet-600" /> 分镜格子
               <span className="text-xs font-normal text-gray-400">每格 = 一张漫画图 + 对话气泡</span>
             </h2>
             {failedCount > 0 && (
@@ -344,7 +503,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
                       </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                      {chPanels.map((p) => {
+                      {chPanels.map((p, pIdx) => {
                         const img = toImgUrl(p.imageUrl);
                         const isBusy = p.status === "generating";
                         const isFailed = p.status === "failed";
@@ -407,6 +566,31 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
                               )}
                             </div>
                             <div className="p-2">
+                              <div className="flex items-center gap-1 mb-1.5">
+                                <button
+                                  onClick={() => openEdit(p)}
+                                  className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md bg-violet-50 text-violet-600 hover:bg-violet-100 transition"
+                                  title="编辑此格"
+                                >
+                                  <Pencil className="w-3 h-3" /> 编辑
+                                </button>
+                                <button
+                                  onClick={() => movePanel(ch, p.id, -1)}
+                                  disabled={reordering || pIdx === 0}
+                                  className="p-1 rounded-md text-gray-400 hover:text-violet-600 hover:bg-violet-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition"
+                                  title="上移一格"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => movePanel(ch, p.id, 1)}
+                                  disabled={reordering || pIdx === chPanels.length - 1}
+                                  className="p-1 rounded-md text-gray-400 hover:text-violet-600 hover:bg-violet-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition"
+                                  title="下移一格"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                               <p className="text-[11px] text-gray-600 line-clamp-2">{p.sceneDesc}</p>
                               <div className="flex items-start gap-1 mt-1 text-[10px]">
                                 {(p.dialogue || p.narration) && (
@@ -435,6 +619,121 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
           </div>
         )}
       </main>
+
+      {/* 分格编辑弹窗 */}
+      <Dialog open={!!editPanel} onOpenChange={(o) => !o && setEditPanel(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>编辑分格</DialogTitle>
+            <DialogDescription>
+              修改台词 / 旁白 / 画面描述 / 气泡方位。改完保存后如需新图，请在工作台点"换一张"重新生成。
+            </DialogDescription>
+          </DialogHeader>
+          {editPanel && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">画面描述（场景）</label>
+                <Textarea
+                  value={editForm.sceneDesc}
+                  onChange={(e) => setEditForm((f) => ({ ...f, sceneDesc: e.target.value }))}
+                  rows={3}
+                  placeholder="该格的画面内容，将作为生图提示词的一部分"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">台词（对话气泡）</label>
+                <Textarea
+                  value={editForm.dialogue}
+                  onChange={(e) => setEditForm((f) => ({ ...f, dialogue: e.target.value }))}
+                  rows={2}
+                  placeholder="角色说的对白"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">旁白</label>
+                <Textarea
+                  value={editForm.narration}
+                  onChange={(e) => setEditForm((f) => ({ ...f, narration: e.target.value }))}
+                  rows={2}
+                  placeholder="旁白 / 描述性文字"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">气泡方位</label>
+                <Select
+                  value={editForm.bubbleSide}
+                  onValueChange={(v) => setEditForm((f) => ({ ...f, bubbleSide: v }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="选择气泡方位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">左侧</SelectItem>
+                    <SelectItem value="right">右侧</SelectItem>
+                    <SelectItem value="top">上方</SelectItem>
+                    <SelectItem value="bottom">下方</SelectItem>
+                    <SelectItem value="center">居中</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                取消
+              </button>
+            </DialogClose>
+            <button
+              onClick={saveEdit}
+              disabled={editing}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition flex items-center gap-1.5"
+            >
+              {editing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              保存
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 续写下一话弹窗 */}
+      <Dialog open={continueOpen} onOpenChange={(o) => !o && setContinueOpen(false)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>续写下一话</DialogTitle>
+            <DialogDescription>
+              复用本作品已有角色卡，AI 为它生成下一话脚本（约 20 格）。可选填后续剧情要点，留空则基于上文自动延续。消耗 2 积分。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="block text-sm font-medium">后续剧情（可选）</label>
+            <Textarea
+              value={continueText}
+              onChange={(e) => setContinueText(e.target.value)}
+              rows={4}
+              placeholder="例如：主角发现镜中器灵的真正身世与千年恩怨…（留空则基于已有上文自动续写）"
+            />
+            <p className="text-xs text-gray-400">
+              当前已有 {characters.length} 位角色将被自动沿用，新登场的角色会补充进角色卡。
+            </p>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                取消
+              </button>
+            </DialogClose>
+            <button
+              onClick={doContinue}
+              disabled={continuing}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition flex items-center gap-1.5"
+            >
+              {continuing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              续写下一话（2 积分）
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

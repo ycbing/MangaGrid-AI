@@ -142,3 +142,14 @@
 }
 .animate-float { animation: float 5s ease-in-out infinite; }
 .animate-float-delay { animation: float 5s ease-in-out 2.5s infinite; }
+
+
+/* 全站统一亮紫渐变背景（设计基准 = Landing） */
+.bg-app {
+  background: radial-gradient(ellipse at top, #f3eeff 0%, #ffffff 55%);
+}
+
+/* 品牌主渐变按钮（统一主 CTA 视觉） */
+.btn-brand {
+  background: linear-gradient(to right, #7c3aed, #9333ea);
+}

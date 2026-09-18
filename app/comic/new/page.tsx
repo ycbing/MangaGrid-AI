@@ -74,30 +74,33 @@ export default function CreateComicPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b to-violet-50/50 to-white">
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-gray-800">
+    <div className="min-h-screen bg-app">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-violet-100/60">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-gray-800 transition">
             <ArrowLeft className="w-4 h-4" /> 返回
           </Link>
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
-              <BookOpen className="w-4.5 h-4.5 text-white" />
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-200 group-hover:scale-105 transition">
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold">漫格 MangaGrid</span>
+            <div className="leading-tight">
+              <div className="font-bold text-[17px] tracking-tight">漫格 MangaGrid</div>
+              <div className="text-[10px] text-violet-400 font-medium tracking-widest">AI COMIC STUDIO</div>
+            </div>
           </Link>
           <div className="w-14" />
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 animate-[fadeUp_.5s_ease]">
           <h1 className="text-3xl font-bold">从文字到漫画，只需一步</h1>
           <p className="text-gray-500 mt-2">粘贴小说章节或输入创意，AI 自动生成脚本、锁定角色、画出分镜</p>
         </div>
 
         {/* 快速模板 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 animate-[fadeUp_.5s_.05s_ease_both]">
           {TEMPLATES.map((t, i) => (
             <button
               key={i}
@@ -105,7 +108,7 @@ export default function CreateComicPage() {
                 setSourceText(t.text);
                 setGenre(t.genre);
               }}
-              className="text-left p-3.5 rounded-xl border border-dashed hover:border-violet-400 hover:bg-violet-50/50 transition text-sm text-gray-600"
+              className="text-left p-3.5 rounded-2xl border border-dashed border-violet-200/70 hover:border-violet-400 hover:bg-violet-50/50 hover:-translate-y-0.5 transition-all text-sm text-gray-600"
             >
               <Sparkles className="w-4 h-4 inline mr-1.5 text-violet-400" />
               {t.text}
@@ -114,7 +117,7 @@ export default function CreateComicPage() {
         </div>
 
         {/* 创意输入 */}
-        <div className="bg-white rounded-2xl border p-5 shadow-sm">
+        <div className="bg-white rounded-2xl border border-violet-100/70 p-5 shadow-sm animate-[fadeUp_.5s_.1s_ease_both]">
           <label className="block text-sm font-medium mb-2">
             创意 / 小说章节 <span className="text-red-500">*</span>
           </label>
@@ -132,7 +135,7 @@ export default function CreateComicPage() {
 
         {/* 题材 + 画风 + 版式 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
-          <div className="bg-white rounded-2xl border p-5 shadow-sm">
+          <div className="bg-white rounded-2xl border border-violet-100/70 p-5 shadow-sm">
             <label className="block text-sm font-medium mb-3">题材</label>
             <div className="flex flex-wrap gap-2">
               {GENRES.map((g) => (
@@ -141,7 +144,7 @@ export default function CreateComicPage() {
                   onClick={() => setGenre(g.id)}
                   className={`px-3 py-1.5 rounded-full text-sm border transition ${
                     genre === g.id
-                      ? "bg-violet-600 text-white border-violet-600"
+                      ? "bg-violet-600 text-white border-violet-600 shadow-sm"
                       : "bg-white text-gray-600 border-gray-200 hover:border-violet-300"
                   }`}
                 >
@@ -151,7 +154,7 @@ export default function CreateComicPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border p-5 shadow-sm">
+          <div className="bg-white rounded-2xl border border-violet-100/70 p-5 shadow-sm">
             <label className="block text-sm font-medium mb-3">画风</label>
             <div className="flex flex-wrap gap-2">
               {STYLES.map((s) => (
@@ -161,8 +164,8 @@ export default function CreateComicPage() {
                   title={s.desc}
                   className={`px-3 py-1.5 rounded-full text-sm border transition ${
                     style === s.id
-                      ? "bg-purple-600 text-white border-purple-600"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-purple-300"
+                      ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-violet-300"
                   }`}
                 >
                   {s.emoji} {s.name}
@@ -171,15 +174,15 @@ export default function CreateComicPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border p-5 shadow-sm">
+          <div className="bg-white rounded-2xl border border-violet-100/70 p-5 shadow-sm">
             <label className="block text-sm font-medium mb-3">版式</label>
             <div className="flex gap-2">
               <button
                 onClick={() => setLayoutType("strip")}
                 className={`flex-1 px-3 py-2.5 rounded-xl border text-sm transition ${
                   layoutType === "strip"
-                    ? "bg-violet-600 text-white border-violet-600"
-                    : "bg-white text-gray-600 border-gray-200"
+                    ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-violet-300"
                 }`}
               >
                 📱 条漫（竖屏）
@@ -188,8 +191,8 @@ export default function CreateComicPage() {
                 onClick={() => setLayoutType("page")}
                 className={`flex-1 px-3 py-2.5 rounded-xl border text-sm transition ${
                   layoutType === "page"
-                    ? "bg-violet-600 text-white border-violet-600"
-                    : "bg-white text-gray-600 border-gray-200"
+                    ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-violet-300"
                 }`}
               >
                 📄 页漫（横版）
@@ -201,7 +204,7 @@ export default function CreateComicPage() {
         <button
           onClick={submit}
           disabled={submitting}
-          className="mt-6 w-full bg-gradient-to-r to-violet-600 to-purple-600 text-white py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-60 transition"
+          className="mt-6 w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-2 hover:opacity-95 hover:-translate-y-0.5 transition-all shadow-xl shadow-violet-200 disabled:opacity-60"
         >
           {submitting ? (
             <>

@@ -98,8 +98,47 @@ function mockScript(input: string): ComicScript {
   return { title, characters: chars, scenes };
 }
 
+function mockScriptContinuation(
+  input: string,
+  options: { chapterNumber?: number; existingCharacters?: ComicScriptCharacter[] } = {}
+): ComicScript {
+  const n = options.chapterNumber || 2;
+  const chars: ComicScriptCharacter[] =
+    options.existingCharacters && options.existingCharacters.length
+      ? options.existingCharacters
+      : [
+          { name: "林小满", role: "protagonist", gender: "女", age: "少女", appearance: "黑长直发，琥珀色眼眸，清秀瓜子脸，红白配色古风长裙，腰间玉佩", personality: "机灵倔强" },
+          { name: "陈默", role: "supporting", gender: "男", age: "青年", appearance: "银白短发，冷峻剑眉，深蓝眼眸，玄色劲装，背一柄古剑", personality: "沉默寡言" },
+          { name: "苏晚晴", role: "villain", gender: "女", age: "青年", appearance: "紫发高马尾，丹凤眼，红唇，暗紫纱衣，手持折扇", personality: "腹黑高傲" },
+        ];
+  const hero = chars.find((c) => c.role === "protagonist") || chars[0];
+  const villain = chars.find((c) => c.role === "villain") || chars[1] || chars[0];
+  const mk = (id: string, sd: string, ch: string[], dlg = "", nar = "", side = "left"): ComicPanel => ({
+    scene_desc: sd, characters: ch, dialogue: dlg, narration: nar, bubble_side: side as any,
+  });
+  const scenes: ComicScene[] = [
+    { id: "s1", scene_desc: "云雾缭绕的青山之巅，晨光穿透云海", panels: [
+      mk("s1p1", `远景：朝阳升起，${hero.name}立于山巅，神色凝重眺望远方`, [hero.name], "", `第${n}话 · 风波再起`, "top"),
+      mk("s1p2", `中景：${hero.name}手握铜镜，镜面泛起涟漪，器灵的声音自镜中传出`, [hero.name], "镜中之力…在躁动？", "", "left"),
+      mk("s1p3", `特写：铜镜金光暴涨，镜面浮现一道裂痕，隐约有暗影涌动`, [hero.name], "不好，封印要破了！", "", "right"),
+    ]},
+    { id: "s2", scene_desc: "古朴洞府内，紫衣女子负手踱步，神色阴冷", panels: [
+      mk("s2p1", `全景：${villain.name}负手立于洞府中央，目光凌厉扫过虚空`, [villain.name], "那丫头…终于动用了镜中之力。", "", "right"),
+      mk("s2p2", `中景：${villain.name}展开折扇，嘴角勾起一抹冷笑`, [villain.name], "这一次，我看你往哪逃。", "", "left"),
+      mk("s2p3", `特写：${villain.name}掌心聚起暗紫灵光，虚空勾勒出法阵符文`, [villain.name], "", "猎杀…开始。", "top"),
+    ]},
+    { id: "s3", scene_desc: "黄昏山道，一场追逐战一触即发", panels: [
+      mk("s3p1", `中景：${hero.name}在山道狂奔，衣袂翻飞，神色紧张回望`, [hero.name], "她追来了！", "", "left"),
+      mk("s3p2", `远景：${villain.name}御风而来，法阵当空压下，威压逼人`, [villain.name, hero.name], "交出镜子，饶你不死。", "", "right"),
+      mk("s3p3", `特写：${hero.name}咬牙催动铜镜，金光与暗紫灵光对撞，光芒炸裂`, [hero.name, villain.name], "", `镜灵觉醒 · 第${n}话 完。`, "top"),
+    ]},
+  ];
+  return { title: "风波再起", characters: chars, scenes };
+}
+
 /**
- * 生成漫画脚本（第一话）
+ * 生成漫画脚本（第 N 话 / 续写）
+
  */
 export async function generateComicScript(
   input: string,
@@ -109,22 +148,40 @@ export async function generateComicScript(
     layoutType?: "strip" | "page";
     panelCount?: number;
     userId?: string;
+    chapterNumber?: number; // 第几话（默认 1 = 第一话）
+    existingCharacters?: ComicScriptCharacter[]; // 已有角色卡（续写时复用）
+    continuity?: string; // 前情提要 / 上文
   } = {}
 ): Promise<ComicScript> {
   const genre = options.genre || "fantasy";
   const style = options.style || "manhua";
   const layoutType = options.layoutType || "strip";
   const panelCount = options.panelCount || 20;
+  const chapterNumber = options.chapterNumber || 1;
+  const existingCharacters = options.existingCharacters || [];
+  const continuity = options.continuity;
+  const isContinuation = chapterNumber > 1 || existingCharacters.length > 0;
 
   const styleDesc = STYLE_PROMPT[style] || STYLE_PROMPT.manhua;
   const genreZh = GENRE_ZH[genre] || "玄幻";
 
   // MOCK 模式：无 LLM key 时用于全流程联调
   if (process.env.MOCK_SCRIPT === "1") {
-    return mockScript(input);
+    return isContinuation ? mockScriptContinuation(input, options) : mockScript(input);
   }
 
-  const systemPrompt = `你是一位专业的漫画编剧和分镜师。根据用户提供的内容，创作一部${genreZh}题材的漫画第一话脚本。
+  const chapterLabel = isContinuation ? `第 ${chapterNumber} 话` : "第一话";
+  const charLines = existingCharacters
+    .map((c) => `- ${c.name}（${c.role}）：${c.appearance}，性格：${c.personality}`)
+    .join("\n");
+  const charSection = isContinuation
+    ? `1. 沿用以下已有角色卡，保持其外貌与性格完全一致，让角色在后续剧情中成长或推进关系\n${charLines || "- （暂无，可自行设计 3-5 个角色）"}\n2. 若剧情需要可新增 1-2 个角色，但必须给出固定 appearance`
+    : "";
+  const continuitySection = isContinuation
+    ? `\n\n# 前情提要（上文仅作背景参考，不要重复已发生情节）\n${(continuity || "").slice(0, 1200) || "承接上一话结尾悬念继续展开"}`
+    : "";
+
+  const systemPrompt = `你是一位专业的漫画编剧和分镜师。根据用户提供的内容，创作一部${genreZh}题材的漫画${chapterLabel}脚本。
 
 # 创作要求
 1. **分格合理**: 共 ${panelCount} 格左右（±3），${layoutType === "strip" ? "条漫竖排" : "页漫横排"}，每格是一个独立画面
@@ -135,6 +192,9 @@ export async function generateComicScript(
 6. **角色一致**: 每个角色的 appearance 必须固定且详细（性别+年龄+发型发色+脸型+眼睛+体型+服装+标志性配饰），后续所有格子的生图都依赖它
 7. **气泡位置**: dialogue 的 bubble_side 根据画面构图选 left/right；narration 用 top
 8. **结尾留钩子**: 最后一格制造悬念，吸引读者看下一话
+
+# 角色一致性（续写）
+${charSection}
 
 # 画风
 ${styleDesc}
@@ -169,15 +229,21 @@ ${styleDesc}
   ]
 }
 
+${continuitySection}
 注意：
 - characters 3-5 个，appearance 必须具体
 - dialogue 和 narration 至少保证一格有其一，避免整格无文字
 - 不要输出 JSON 以外的任何内容`;
 
+  const contReq = isContinuation
+    ? continuity
+      ? `\n【续写要求】以下是你要接续的剧情要点，请据此推进：\n${continuity.slice(0, 1000)}`
+      : `\n【续写要求】请自然延续上一话结尾的悬念推进剧情，不要重复第一话已发生的情节。`
+    : "";
   const userPrompt = `【用户输入】
 ${input.slice(0, 4000)}
 
-请生成漫画第一话脚本。`;
+请生成漫画${chapterLabel}脚本。${contReq}`;
 
   const result = await chatCompletionJSON<ComicScript>(
     [

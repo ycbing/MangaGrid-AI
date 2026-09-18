@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
+  BookOpen,
   Coins,
   Loader2,
   Plus,
@@ -16,10 +17,29 @@ import {
   Sparkles,
   Settings,
   Cpu,
+  Zap,
+  Gift,
+  History,
+  User,
+  Upload,
+  RefreshCw,
+  MailCheck,
+  ShieldCheck,
+  KeyRound,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { RECHARGE_TIERS } from "@/lib/constants";
 
 // 动态导入模型配置组件（避免服务端渲染问题）
 const ModelConfigSettings = dynamic(
@@ -59,6 +79,17 @@ export default function SettingsPage() {
   const [creditInfo, setCreditInfo] = useState<CreditInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"credits" | "model">("credits");
+  const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [recharging, setRecharging] = useState(false);
+  const [selectedTier, setSelectedTier] = useState(0);
+  const [profile, setProfile] = useState<{
+    id: string;
+    email: string;
+    name: string | null;
+    avatarUrl: string | null;
+    emailVerified: string | null;
+    createdAt: string;
+  } | null>(null);
 
   const fetchCredits = useCallback(async () => {
     try {
@@ -74,6 +105,76 @@ export default function SettingsPage() {
     }
   }, []);
 
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user/profile");
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data);
+      }
+    } catch {
+      // 静默
+    }
+  }, []);
+
+  const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/user/avatar", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("头像已更新");
+        fetchProfile();
+      } else {
+        toast.error(data.error || "上传失败");
+      }
+    } catch {
+      toast.error("上传失败，请稍后重试");
+    }
+  };
+
+  const resendVerify = async () => {
+    try {
+      const res = await fetch("/api/auth/resend-verification", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "验证邮件已发送");
+        if (data.actionLink) window.open(data.actionLink, "_blank");
+      } else {
+        toast.error(data.error || "发送失败");
+      }
+    } catch {
+      toast.error("发送失败，请稍后重试");
+    }
+  };
+
+  const doRecharge = async () => {
+    if (recharging) return;
+    setRecharging(true);
+    try {
+      const res = await fetch("/api/user/credits/recharge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tierIndex: selectedTier }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        toast.success(data.message || "充值成功");
+        setRechargeOpen(false);
+        setCreditInfo((prev) => (prev ? { ...prev, balance: data.balance } : prev));
+      } else {
+        toast.error(data.error || "充值失败");
+      }
+    } catch {
+      toast.error("充值失败，请重试");
+    } finally {
+      setRecharging(false);
+    }
+  };
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/sign-in");
@@ -81,8 +182,9 @@ export default function SettingsPage() {
     }
     if (status === "authenticated") {
       fetchCredits();
+      fetchProfile();
     }
-  }, [status, fetchCredits]);
+  }, [status, fetchCredits, fetchProfile]);
 
   if (status === "loading" || loading) {
     return (
@@ -96,7 +198,7 @@ export default function SettingsPage() {
   const logs = creditInfo?.logs ?? [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-app">
       {/* Header */}
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40">
         <div className="mx-auto max-w-3xl flex items-center justify-between px-4 h-14 sm:h-16">
@@ -106,6 +208,9 @@ export default function SettingsPage() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-200">
+              <BookOpen className="w-5 h-5 text-white" />
+            </div>
             <h1 className="text-base sm:text-lg font-bold">账户设置</h1>
           </div>
           {session?.user && (
@@ -164,11 +269,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground mt-1">剩余积分</p>
                   </div>
                   <Button
-                    onClick={() =>
-                      toast.info("充值功能即将上线，敬请期待！🎉", {
-                        duration: 3000,
-                      })
-                    }
+                    onClick={() => setRechargeOpen(true)}
                     className="bg-violet-600 hover:bg-violet-700 min-h-[44px]"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -266,17 +367,79 @@ export default function SettingsPage() {
             {/* Account info */}
             <Card className="border-border/50 bg-card/50">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">账户信息</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <User className="h-5 w-5 text-violet-600" /> 账户信息
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">邮箱</span>
-                  <span>{session?.user?.email || "-"}</span>
+              <CardContent className="space-y-4 text-sm">
+                {/* 头像 */}
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border border-border/60 bg-muted/40 flex items-center justify-center shrink-0">
+                    {profile?.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt="头像" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="h-7 w-7 text-muted-foreground" />
+                    )}
+                  </div>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={onAvatarChange}
+                      className="hidden"
+                    />
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                      <Upload className="h-3.5 w-3.5" />
+                      {profile?.avatarUrl ? "更换头像" : "上传头像"}
+                    </Button>
+                  </label>
                 </div>
                 <Separator className="bg-border/50" />
+                {/* 邮箱 + 验证状态 */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground shrink-0">邮箱</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="truncate">{session?.user?.email || "-"}</span>
+                    {profile?.emailVerified ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-600 shrink-0">
+                        <ShieldCheck className="h-3.5 w-3.5" /> 已验证
+                      </span>
+                    ) : (
+                      <button
+                        onClick={resendVerify}
+                        className="inline-flex items-center gap-1 text-xs text-violet-600 hover:underline shrink-0"
+                      >
+                        <MailCheck className="h-3.5 w-3.5" /> 未验证 · 重新发送
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <Separator className="bg-border/50" />
+                {/* 昵称 */}
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">昵称</span>
+                  <span>{profile?.name || session?.user?.name || "-"}</span>
+                </div>
+                <Separator className="bg-border/50" />
+                {/* 注册时间 */}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">注册时间</span>
-                  <span>-</span>
+                  <span>
+                    {profile?.createdAt
+                      ? new Date(profile.createdAt).toLocaleDateString("zh-CN")
+                      : "-"}
+                  </span>
+                </div>
+                <Separator className="bg-border/50" />
+                {/* 修改密码 */}
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">登录密码</span>
+                  <Link
+                    href="/forgot-password"
+                    className="inline-flex items-center gap-1 text-violet-600 hover:underline"
+                  >
+                    <KeyRound className="h-3.5 w-3.5" /> 修改密码
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -296,6 +459,72 @@ export default function SettingsPage() {
           </Card>
         )}
       </main>
+
+      {/* 积分充值弹窗（模拟支付） */}
+      <Dialog open={rechargeOpen} onOpenChange={(o) => !o && setRechargeOpen(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-violet-600" />
+              充值积分
+            </DialogTitle>
+            <DialogDescription>
+              选择充值档位，当前为模拟支付，点击确认即到账。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2.5 py-1">
+            {RECHARGE_TIERS.map((tier, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedTier(i)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition ${
+                  selectedTier === i
+                    ? "border-violet-500 bg-violet-50/70 ring-2 ring-violet-200"
+                    : "border-gray-200 bg-white hover:border-violet-300"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-violet-200">
+                    {tier.credits}
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium">{tier.credits} 积分</div>
+                    {tier.bonus ? (
+                      <div className="text-xs text-violet-600 flex items-center gap-0.5">
+                        <Gift className="h-3 w-3" /> 赠送 {tier.bonus} 积分
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">无赠送</div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-lg font-bold text-violet-700">¥{tier.price}</div>
+              </button>
+            ))}
+            <div className="pt-1 text-xs text-muted-foreground flex items-center gap-1">
+              <History className="h-3.5 w-3.5" />
+              到账积分 = 档位积分 + 赠送积分，充值记录可在下方查看
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                取消
+              </button>
+            </DialogClose>
+            <button
+              onClick={doRecharge}
+              disabled={recharging}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition flex items-center gap-1.5"
+            >
+              {recharging ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              {recharging
+                ? "支付中…"
+                : `确认支付 ¥${RECHARGE_TIERS[selectedTier]?.price ?? 0}`}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

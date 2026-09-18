@@ -83,7 +83,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-200 group-hover:scale-105 transition">
-              <BookOpen className="w-4.5 h-4.5 text-white" />
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div className="leading-tight">
               <div className="font-bold text-[17px] tracking-tight">漫格 MangaGrid</div>
@@ -143,7 +143,7 @@ export default function HomePage() {
                 className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-500 text-white px-8 py-4 rounded-2xl font-semibold shadow-xl shadow-violet-200 hover:shadow-violet-300 hover:-translate-y-0.5 transition-all"
               >
                 免费开始创作
-                <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-0.5 transition" />
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition" />
               </Link>
               <a
                 href="#how"
@@ -249,7 +249,7 @@ export default function HomePage() {
               className="group bg-white rounded-3xl border border-violet-100/70 p-7 hover:shadow-2xl hover:shadow-violet-100 hover:-translate-y-1.5 hover:border-violet-200 transition-all duration-300"
             >
               <div className={`w-12 h-12 rounded-2xl ${f.tint} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
-                <f.icon className="w-5.5 h-5.5" />
+                <f.icon className="w-5 h-5" />
               </div>
               <h3 className="font-bold text-lg mb-2">{f.title}</h3>
               <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>

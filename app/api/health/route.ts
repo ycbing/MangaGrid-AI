@@ -31,14 +31,6 @@ export async function GET() {
     checks.glm_api = { ok: false, detail: "Failed to check" };
   }
 
-  // Check iFlytek TTS
-  try {
-    const { isXunfeiConfigured } = await import("@/lib/ai/xunfei-tts");
-    checks.xunfei_tts = { ok: isXunfeiConfigured(), detail: isXunfeiConfigured() ? "iFlytek TTS configured" : "iFlytek TTS not configured" };
-  } catch {
-    checks.xunfei_tts = { ok: false, detail: "Failed to check" };
-  }
-
   const allOk = Object.values(checks).every((c) => c.ok);
 
   return NextResponse.json(

@@ -43,7 +43,7 @@ export default function SignInContent() {
         <CardHeader className="text-center">
           <Link href="/" className="flex items-center justify-center gap-2 mb-4">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-200">
-              <BookOpen className="w-4.5 h-4.5 text-white" />
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold bg-gradient-to-r from-violet-600 to-purple-500 bg-clip-text text-transparent">
               漫格 MangaGrid
@@ -91,6 +91,15 @@ export default function SignInContent() {
                 required
                 className="bg-muted/30"
               />
+
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-xs text-violet-600 hover:underline"
+              >
+                忘记密码？
+              </Link>
+            </div>
             </div>
             <Button
               type="submit"

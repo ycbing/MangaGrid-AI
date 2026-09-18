@@ -1,4 +1,4 @@
-import { getStyleImagePrompt } from "./script-generator";
+import { getStyleImagePrompt } from "./style-image-prompts";
 import { withRetry, withTimeout } from "@/lib/resilience";
 import { createLogger } from "@/lib/logger";
 import { resolveConfig } from "@/lib/ai/model-resolver";

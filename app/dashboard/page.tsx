@@ -3,8 +3,25 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, BookOpen, Sparkles, Trash2, ChevronRight, Loader2 } from "lucide-react";
+import {
+  Plus,
+  BookOpen,
+  Sparkles,
+  Trash2,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 interface Comic {
   id: string;
@@ -44,6 +61,7 @@ export default function DashboardPage() {
   const [comics, setComics] = useState<Comic[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Comic | null>(null);
 
   useEffect(() => {
     fetch("/api/comics")
@@ -71,15 +89,15 @@ export default function DashboardPage() {
     return p;
   };
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`确定删除《${title}》吗？删除后不可恢复。`)) return;
+  const confirmDelete = async (id: string, title: string) => {
+    if (!deleteTarget || deleteTarget.id !== id) return;
     setDeleting(id);
     try {
       const r = await fetch(`/api/comics/${id}`, { method: "DELETE" });
       const d = await r.json();
       if (d.ok) {
         setComics((list) => list.filter((c) => c.id !== id));
-        toast.success("已删除");
+        toast.success(`已删除《${title}》`);
       } else {
         toast.error(d.error || "删除失败");
       }
@@ -87,39 +105,27 @@ export default function DashboardPage() {
       toast.error("删除失败");
     } finally {
       setDeleting(null);
+      setDeleteTarget(null);
     }
-  };
-
-  const statusButton = (c: Comic) => {
-    const base = "px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5";
-    if (c.status === "script_ready" || c.status === "draft" || c.status === "generating" || c.status === "error") {
-      return (
-        <Link href={`/comic/${c.id}`} className={`${base} bg-violet-600 text-white hover:bg-violet-700`}>
-          编辑创作 <ChevronRight className="w-4 h-4" />
-        </Link>
-      );
-    }
-    return (
-      <Link href={`/comic/${c.id}`} className={`${base} bg-violet-600 text-white hover:bg-violet-700`}>
-        继续创作 <ChevronRight className="w-4 h-4" />
-      </Link>
-    );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b to-violet-50/50 to-white">
+    <div className="min-h-screen bg-app">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
-              <BookOpen className="w-4.5 h-4.5 text-white" />
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-violet-100/60">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-200 group-hover:scale-105 transition">
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg">漫格 MangaGrid</span>
+            <div className="leading-tight">
+              <div className="font-bold text-[17px] tracking-tight">漫格 MangaGrid</div>
+              <div className="text-[10px] text-violet-400 font-medium tracking-widest">AI COMIC STUDIO</div>
+            </div>
           </Link>
           <button
             onClick={() => router.push("/comic/new")}
-            className="flex items-center gap-1.5 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 transition"
+            className="flex items-center gap-1.5 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200"
           >
             <Plus className="w-4 h-4" /> 新建漫画
           </button>
@@ -127,7 +133,7 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-[fadeUp_.5s_ease]">
           <div>
             <h1 className="text-2xl font-bold">我的作品</h1>
             <p className="text-gray-500 text-sm mt-1">从网文到条漫，只需 5 分钟</p>
@@ -140,13 +146,13 @@ export default function DashboardPage() {
             <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
           </div>
         ) : comics.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-2xl border border-dashed">
+          <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-violet-200/70 shadow-sm animate-[fadeUp_.5s_.05s_ease_both]">
             <Sparkles className="w-12 h-12 text-violet-300 mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">还没有作品</h2>
             <p className="text-gray-500 mb-6">输入一个创意或粘贴小说章节，AI 帮你画出第一话</p>
             <button
               onClick={() => router.push("/comic/new")}
-              className="bg-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-violet-700 transition"
+              className="btn-brand text-white px-6 py-3 rounded-xl font-medium hover:opacity-95 hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200"
             >
               开始创作 →
             </button>
@@ -159,14 +165,14 @@ export default function DashboardPage() {
               return (
                 <div
                   key={c.id}
-                  className="group bg-white rounded-2xl border overflow-hidden hover:shadow-lg transition"
+                  className="group bg-white rounded-2xl border border-violet-100/70 overflow-hidden hover:shadow-xl hover:shadow-violet-100 hover:-translate-y-1 transition-all duration-300"
                 >
                   <Link href={`/comic/${c.id}`} className="block relative aspect-[4/3] bg-gray-100">
                     {cover ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={cover} alt={c.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br to-violet-50 to-purple-50">
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-50 to-purple-50">
                         <BookOpen className="w-10 h-10 text-violet-200" />
                       </div>
                     )}
@@ -192,15 +198,21 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleDelete(c.id, c.title)}
-                        disabled={deleting === c.id}
-                        className="text-gray-300 hover:text-red-500 transition disabled:opacity-50"
+                        onClick={() => setDeleteTarget(c)}
+                        className="text-gray-300 hover:text-red-500 transition"
                         title="删除"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="mt-3">{statusButton(c)}</div>
+                    <div className="mt-3">
+                      <Link
+                        href={`/comic/${c.id}`}
+                        className="flex items-center justify-center gap-1.5 w-full bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 hover:-translate-y-0.5 transition-all"
+                      >
+                        继续创作 <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               );
@@ -208,6 +220,33 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* 删除确认弹窗 */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>删除作品</DialogTitle>
+            <DialogDescription>
+              确定删除《{deleteTarget?.title}》吗？删除后不可恢复。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                取消
+              </button>
+            </DialogClose>
+            <button
+              onClick={() => deleteTarget && confirmDelete(deleteTarget.id, deleteTarget.title)}
+              disabled={deleting === deleteTarget?.id}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition flex items-center gap-1.5"
+            >
+              {deleting === deleteTarget?.id && <Loader2 className="w-4 h-4 animate-spin" />}
+              删除
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

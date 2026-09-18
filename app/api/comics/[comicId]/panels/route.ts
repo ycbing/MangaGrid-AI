@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { comics, comicChapters, comicCharacters, comicPanels } from "@/lib/db/comic-schema";
-import { eq, and, inArray } from "drizzle-orm";
-import { v4 as uuidv4 } from "uuid";
+import { eq } from "drizzle-orm";
 import { generateImage, downloadImage } from "@/lib/ai/image-generator";
 import { uploadFileToCos } from "@/lib/ai/cos-storage";
 import { deductCredits } from "@/lib/credits";
@@ -42,7 +41,100 @@ function buildPanelPrompt(
   return parts.join("。");
 }
 
-// POST /api/comics/[comicId]/panels — 批量生成分格图
+/** 后台异步批量生图任务：逐格写库，失败单独标记，任务内兜底捕获，不抛未处理异常 */
+async function runPanelTask(
+  opts: {
+    userId: string;
+    comic: typeof comics.$inferSelect;
+    chars: any[];
+    targets: typeof comicPanels.$inferSelect[];
+    stylePrompt: string;
+    imageSize: string;
+  }
+) {
+  const { userId, comic, chars, targets, stylePrompt, imageSize } = opts;
+  let done = 0;
+  let failed = 0;
+
+  try {
+    // 并发池：qwen 单图 ~50s，串行太慢；并发平衡速度与限流
+    const CONCURRENCY = Math.min(Number(process.env.PANEL_CONCURRENCY) || 2, 6);
+
+    const genOne = async (panel: any) => {
+      // 标记生成中
+      await db
+        .update(comicPanels)
+        .set({ status: "generating" })
+        .where(eq(comicPanels.id, panel.id));
+
+      try {
+        const prompt = buildPanelPrompt(panel, chars, stylePrompt);
+        let imageUrl: string | null = null;
+
+        if (MOCK_IMAGES) {
+          imageUrl = `https://placehold.co/720x1280/2d3436/white?text=${encodeURIComponent(
+            `P${panel.panelNumber} ${(panel.dialogue || panel.narration || "").slice(0, 8)}`
+          )}`;
+        } else {
+          const references = ((panel.characters as string[]) || [])
+            .map((name: string) => chars.find((c) => c.name === name))
+            .filter((c: any) => c?.referenceImageUrl)
+            .map((c: any) => ({
+              imageUrl: c.referenceImageUrl,
+              type: "full_body" as const,
+              characterName: c.name,
+            }));
+
+          const generated = await generateImage(prompt, comic.style || "manhua", imageSize as any, {
+            characterReferences: references.length ? references : undefined,
+            userId,
+          });
+
+          const tmpDir = await mkdtemp(path.join(tmpdir(), "manga-panel-"));
+          const localPath = path.join(tmpDir, `${panel.id}.png`);
+          await downloadImage(generated, localPath);
+          const cosKey = `${comic.id}/panels/${panel.id}.png`;
+          const cosUrl = await uploadFileToCos(localPath, cosKey);
+          await rm(tmpDir, { recursive: true, force: true });
+          imageUrl = cosUrl || generated;
+        }
+
+        await db
+          .update(comicPanels)
+          .set({ imageUrl, status: "done", errorMessage: null })
+          .where(eq(comicPanels.id, panel.id));
+        await deductCredits(userId, "comicPanel", 1, undefined, `分格生图 P${panel.panelNumber}`);
+        done += 1;
+      } catch (err: any) {
+        log.error(`分格生图失败 P${panel.panelNumber}`, err);
+        await db
+          .update(comicPanels)
+          .set({ status: "failed", errorMessage: err.message?.slice(0, 200) })
+          .where(eq(comicPanels.id, panel.id));
+        failed += 1;
+      }
+    };
+
+    // 并发调度
+    for (let i = 0; i < targets.length; i += CONCURRENCY) {
+      const batch = targets.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(genOne));
+      log.info(`分格生图进度 ${Math.min(i + CONCURRENCY, targets.length)}/${targets.length}`, {
+        done,
+        failed,
+      });
+    }
+
+    const newStatus =
+      failed === 0 ? "panels_ready" : done > 0 ? "panels_partial" : comic.status;
+    await db.update(comics).set({ status: newStatus, updatedAt: new Date() }).where(eq(comics.id, comic.id));
+    log.info(`分格生图任务结束: total=${targets.length} done=${done} failed=${failed}`);
+  } catch (err: any) {
+    log.error("分格生图后台任务异常", err);
+  }
+}
+
+// POST /api/comics/[comicId]/panels — 批量生成分格图（异步：立即返回 202，后台逐格生成）
 // body: { panelIds?: string[] } 不传则生成所有 pending/failed 格子
 export async function POST(request: NextRequest, { params }: { params: Promise<{ comicId: string }> }) {
   const session = await auth();
@@ -83,86 +175,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const isStrip = comicRow[0].layoutType !== "page";
     const imageSize = isStrip ? "720x1280" : "1024x1024";
 
-    const results: Record<string, { status: string; imageUrl?: string | null; error?: string }> = {};
-    let done = 0;
-    let failed = 0;
+    // 异步 fire-and-forget：立即返回，后台逐格生成并写库，前端轮询进度
+    void runPanelTask({
+      userId: session.user.id,
+      comic: comicRow[0],
+      chars,
+      targets,
+      stylePrompt,
+      imageSize,
+    });
 
-    // 并发池：qwen 单图 ~50s，串行太慢；3 并发平衡速度与限流
-    const CONCURRENCY = Math.min(Number(process.env.PANEL_CONCURRENCY) || 2, 6);
-
-    const genOne = async (panel: any) => {
-      // 标记生成中
-      await db
-        .update(comicPanels)
-        .set({ status: "generating" })
-        .where(eq(comicPanels.id, panel.id));
-
-      try {
-        const prompt = buildPanelPrompt(panel, chars, stylePrompt);
-        let imageUrl: string | null = null;
-
-        if (MOCK_IMAGES) {
-          // mock 占位图
-          imageUrl = `https://placehold.co/720x1280/2d3436/white?text=${encodeURIComponent(
-            `P${panel.panelNumber} ${(panel.dialogue || panel.narration || "").slice(0, 8)}`
-          )}`;
-        } else {
-          const references = ((panel.characters as string[]) || [])
-            .map((name: string) => chars.find((c) => c.name === name))
-            .filter((c: any) => c?.referenceImageUrl)
-            .map((c: any) => ({
-              imageUrl: c.referenceImageUrl,
-              type: "full_body" as const,
-              characterName: c.name,
-            }));
-
-          const generated = await generateImage(prompt, comicRow[0].style || "manhua", imageSize as any, {
-            characterReferences: references.length ? references : undefined,
-            userId: session.user.id,
-          });
-
-          const tmpDir = await mkdtemp(path.join(tmpdir(), "manga-panel-"));
-          const localPath = path.join(tmpDir, `${panel.id}.png`);
-          await downloadImage(generated, localPath);
-          const cosKey = `${comicId}/panels/${panel.id}.png`;
-          const cosUrl = await uploadFileToCos(localPath, cosKey);
-          await rm(tmpDir, { recursive: true, force: true });
-          imageUrl = cosUrl || generated;
-        }
-
-        await db
-          .update(comicPanels)
-          .set({ imageUrl, status: "done", errorMessage: null })
-          .where(eq(comicPanels.id, panel.id));
-        await deductCredits(session.user.id, "comicPanel", 1, undefined, `分格生图 P${panel.panelNumber}`);
-        results[panel.id] = { status: "done", imageUrl };
-        done += 1;
-      } catch (err: any) {
-        log.error(`分格生图失败 P${panel.panelNumber}`, err);
-        await db
-          .update(comicPanels)
-          .set({ status: "failed", errorMessage: err.message?.slice(0, 200) })
-          .where(eq(comicPanels.id, panel.id));
-        results[panel.id] = { status: "failed", error: err.message };
-        failed += 1;
-      }
-    };
-
-    // 并发调度
-    for (let i = 0; i < targets.length; i += CONCURRENCY) {
-      const batch = targets.slice(i, i + CONCURRENCY);
-      await Promise.all(batch.map(genOne));
-      log.info(`分格生图进度 ${Math.min(i + CONCURRENCY, targets.length)}/${targets.length}`, {
-        done,
-        failed,
-      });
-    }
-
-    const newStatus =
-      failed === 0 ? "panels_ready" : done > 0 ? "panels_partial" : comicRow[0].status;
-    await db.update(comics).set({ status: newStatus, updatedAt: new Date() }).where(eq(comics.id, comicId));
-
-    return NextResponse.json({ results, summary: { total: targets.length, done, failed } });
+    return NextResponse.json(
+      { started: true, pending: targets.length, message: `已开始生成 ${targets.length} 格分镜` },
+      { status: 202 }
+    );
   } catch (err: any) {
     log.error("panels API failed", err);
     return NextResponse.json({ error: err?.message || "生成分格失败" }, { status: 500 });

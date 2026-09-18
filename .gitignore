@@ -47,3 +47,12 @@ uploads/
 # But keep the API route for serving uploads
 !app/api/uploads/
 - drizzle/
+
+# local dev runtime (portable PG, browser profile, agent plans)
+.localdb/
+.rundata/
+.lingxi/
+
+# walkthrough screenshots & backups
+_shot_*.png
+docs/*.bak

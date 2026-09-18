@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Loader2, ChevronUp, List } from "lucide-react";
+import { ArrowLeft, BookOpen, Download, Loader2, ChevronUp, List } from "lucide-react";
 import { toast } from "sonner";
 import PanelView from "@/components/comic/panel-view";
 
@@ -82,17 +82,17 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+      <div className="min-h-screen flex items-center justify-center bg-app">
+        <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
       </div>
     );
   }
 
   if (!comic) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-gray-900 text-gray-300">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-app text-gray-600">
         <p>作品不存在</p>
-        <Link href="/dashboard" className="text-violet-400">返回工作台</Link>
+        <Link href="/dashboard" className="text-violet-600">返回工作台</Link>
       </div>
     );
   }
@@ -105,28 +105,69 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
   const panels = chapter?.panels || [];
   const isStrip = comic.layoutType !== "page";
 
+  // 导出当前话为逐格拼版 PDF
+  const [exporting, setExporting] = useState(false);
+  const exportPdf = async () => {
+    const c = chapter;
+    if (!c) return;
+    setExporting(true);
+    try {
+      const r = await fetch(`/api/comics/${comicId}/export-pdf?chapter=${c.chapterNumber}`);
+      if (!r.ok) {
+        const text = await r.text().catch(() => "");
+        toast.error(text || "导出失败");
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${comic.title}-第${c.chapterNumber}话.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("PDF 已下载");
+    } catch {
+      toast.error("导出失败");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-app">
       {/* 顶栏 */}
-      <header className="sticky top-0 z-20 bg-black/70 backdrop-blur border-b border-white/10">
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-violet-100/70">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <Link href={`/comic/${comicId}`} className="text-gray-400 hover:text-white shrink-0">
+            <Link href={`/comic/${comicId}`} className="w-9 h-9 rounded-lg bg-violet-100 text-violet-600 hover:bg-violet-200 hover:text-violet-700 flex items-center justify-center shrink-0 transition" aria-label="返回工作台">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <BookOpen className="w-5 h-5 text-violet-400 shrink-0" />
+            <BookOpen className="w-5 h-5 text-violet-600 shrink-0" />
             <div className="min-w-0">
-              <h1 className="text-white font-semibold truncate text-sm">{comic.title}</h1>
-              <p className="text-gray-400 text-xs truncate">{chapter?.title || "第一话"}</p>
+              <h1 className="text-gray-900 font-semibold truncate text-sm">{comic.title}</h1>
+              <p className="text-gray-500 text-xs truncate">{chapter?.title || "第一话"}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs text-gray-400">{panels.length} 格</span>
+            {chapter && (
+              <button
+                onClick={exportPdf}
+                disabled={exporting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-medium hover:bg-violet-700 transition disabled:opacity-50"
+                title="导出当前话为 PDF"
+              >
+                {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                导出 PDF
+              </button>
+            )}
+            <span className="text-xs text-gray-500">{panels.length} 格</span>
             {validChapters.length > 1 && (
               <div className="relative">
                 <button
                   onClick={() => setChapterMenuOpen((v) => !v)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 text-xs font-medium hover:bg-violet-100 transition"
                 >
                   <List className="w-3.5 h-3.5" />
                   第 {chapter?.chapterNumber || 1} 话
@@ -134,7 +175,7 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
                 {chapterMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setChapterMenuOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-48 rounded-xl bg-gray-800 border border-white/10 shadow-2xl py-1.5 z-20 max-h-72 overflow-y-auto">
+                    <div className="absolute right-0 mt-2 w-48 rounded-xl bg-white border border-violet-100 shadow-xl py-1.5 z-20 max-h-72 overflow-y-auto">
                       {validChapters.map((c, i) => (
                         <button
                           key={c.id}
@@ -145,12 +186,12 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
                           }}
                           className={`w-full text-left px-4 py-2.5 text-sm transition ${
                             i === activeChapter
-                              ? "bg-violet-600/30 text-violet-300"
-                              : "text-gray-300 hover:bg-white/5"
+                              ? "bg-violet-600/10 text-violet-700"
+                              : "text-gray-600 hover:bg-violet-50"
                           }`}
                         >
                           第 {c.chapterNumber} 话
-                          <span className="block text-[11px] text-gray-500 truncate">{c.title}</span>
+                          <span className="block text-[11px] text-gray-400 truncate">{c.title}</span>
                         </button>
                       ))}
                     </div>
@@ -165,9 +206,9 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
       {/* 正文 */}
       <main className={`max-w-2xl mx-auto ${isStrip ? "pt-0" : "grid grid-cols-1 sm:grid-cols-2 gap-2 p-4"}`}>
         {panels.length === 0 ? (
-          <div className="text-center py-32 text-gray-400">
+          <div className="text-center py-32 text-gray-500">
             <p className="mb-3">还没有完成的分镜图</p>
-            <Link href={`/comic/${comicId}`} className="text-violet-400 underline">
+            <Link href={`/comic/${comicId}`} className="text-violet-600 underline">
               去生成 →
             </Link>
           </div>
@@ -191,13 +232,13 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
         </div>
       )}
 
-      <footer className="text-center py-8 text-gray-500 text-xs">— 漫格 MangaGrid · 未完待续 —</footer>
+      <footer className="text-center py-8 text-gray-400 text-xs">— 漫格 MangaGrid · 未完待续 —</footer>
 
       {/* 返回顶部 */}
       {showTopBtn && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-6 right-6 z-30 w-11 h-11 rounded-full bg-violet-600 text-white shadow-lg shadow-violet-900/40 flex items-center justify-center hover:bg-violet-700 transition"
+          className="fixed bottom-6 right-6 z-30 w-11 h-11 rounded-full bg-violet-600 text-white shadow-lg shadow-violet-200 flex items-center justify-center hover:bg-violet-700 transition"
           aria-label="返回顶部"
         >
           <ChevronUp className="w-5 h-5" />
