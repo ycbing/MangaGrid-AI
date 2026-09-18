@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, Loader2, Eye, Share2 } from "lucide-react";
+import { BookOpen, Loader2, Eye, Share2, ChevronUp } from "lucide-react";
+import PanelView from "@/components/comic/panel-view";
 
 interface ComicData {
   id: string;
@@ -23,6 +24,7 @@ interface PanelData {
   narration: string | null;
   bubbleSide: string | null;
   imageUrl: string | null;
+  status?: string;
 }
 
 interface ChapterData {
@@ -38,6 +40,7 @@ export default function ShareComicPage() {
   const [chapters, setChapters] = useState<ChapterData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showTopBtn, setShowTopBtn] = useState(false);
 
   useEffect(() => {
     fetch(`/api/share-comic/${token}`)
@@ -53,6 +56,12 @@ export default function ShareComicPage() {
       .catch(() => setError("网络错误"))
       .finally(() => setLoading(false));
   }, [token]);
+
+  useEffect(() => {
+    const onScroll = () => setShowTopBtn(window.scrollY > 600);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const toImgUrl = (p: string | null) => {
     if (!p) return null;
@@ -124,45 +133,7 @@ export default function ShareComicPage() {
           <div className="text-center py-32 text-gray-400">本话还没有内容</div>
         ) : (
           allPanels.map((p) => (
-            <div key={p.id} className="relative w-full bg-black select-none">
-              {toImgUrl(p.imageUrl) && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={toImgUrl(p.imageUrl)!}
-                  alt={`P${p.panelNumber}`}
-                  className="w-full h-auto block"
-                  draggable={false}
-                />
-              )}
-              {p.narration && (
-                <div className="absolute top-2.5 left-1/2 -translate-x-1/2 max-w-[80%]">
-                  <div className="bg-black/75 text-white text-[13px] leading-snug px-3.5 py-1.5 rounded-lg shadow-md text-center border border-white/20">
-                    {p.narration}
-                  </div>
-                </div>
-              )}
-              {p.dialogue && (
-                <div
-                  className={`absolute max-w-[65%] ${
-                    (p.bubbleSide || "bottom") === "left"
-                      ? "left-2.5 top-1/2 -translate-y-1/2"
-                      : (p.bubbleSide || "bottom") === "right"
-                      ? "right-2.5 top-1/2 -translate-y-1/2"
-                      : (p.bubbleSide || "bottom") === "top"
-                      ? "top-10 left-1/2 -translate-x-1/2"
-                      : "bottom-2.5 left-1/2 -translate-x-1/2"
-                  }`}
-                >
-                  <div
-                    className={`relative bg-white text-gray-900 text-sm leading-snug px-3.5 py-2 rounded-2xl shadow-lg border-2 border-gray-800 ${
-                      p.bubbleSide === "left" || p.bubbleSide === "right" ? "" : "text-center"
-                    }`}
-                  >
-                    {p.dialogue}
-                  </div>
-                </div>
-              )}
-            </div>
+            <PanelView key={p.id} panel={p} img={toImgUrl(p.imageUrl)} />
           ))
         )}
       </main>
@@ -170,6 +141,17 @@ export default function ShareComicPage() {
       <footer className="text-center py-8 text-gray-500 text-xs">
         — 由 漫格 MangaGrid AI 创作 · 用 AI 把你的小说变成漫画 →
       </footer>
+
+      {/* 返回顶部 */}
+      {showTopBtn && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-6 right-6 z-30 w-11 h-11 rounded-full bg-violet-600 text-white shadow-lg shadow-violet-900/40 flex items-center justify-center hover:bg-violet-700 transition"
+          aria-label="返回顶部"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 }

@@ -126,9 +126,9 @@
   background: hsl(var(--muted-foreground));
 }
 
-/* Gradient background utility */
+/* 渐变背景工具：登录/注册页与 Landing 亮紫主题保持一致 */
 .bg-gradient-dark {
-  background: linear-gradient(135deg, #0a0a0a 0%, #052e16 50%, #0a0a0a 100%);
+  background: radial-gradient(ellipse at top, #f3eeff 0%, #ffffff 55%);
 }
 
 /* Landing 动画 */

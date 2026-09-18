@@ -35,7 +35,7 @@ export default function DashboardError({
             <RotateCw className="h-4 w-4 mr-2" />
             重新加载
           </Button>
-          <Button onClick={() => (window.location.href = "/")} className="bg-emerald-600 hover:bg-emerald-500 min-h-[44px]">
+          <Button onClick={() => (window.location.href = "/")} className="bg-violet-600 hover:bg-violet-700 min-h-[44px]">
             <Home className="h-4 w-4 mr-2" />
             返回首页
           </Button>

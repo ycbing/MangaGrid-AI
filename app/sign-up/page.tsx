@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Film, Loader2 } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -55,8 +55,10 @@ export default function SignUpPage() {
       <Card className="w-full max-w-sm bg-card/80 backdrop-blur border-border/50">
         <CardHeader className="text-center">
           <Link href="/" className="flex items-center justify-center gap-2 mb-4">
-            <Film className="h-6 w-6 text-emerald-400" />
-            <span className="font-bold bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-200">
+              <BookOpen className="w-4.5 h-4.5 text-white" />
+            </div>
+            <span className="font-bold bg-gradient-to-r from-violet-600 to-purple-500 bg-clip-text text-transparent">
               漫格 MangaGrid
             </span>
           </Link>
@@ -104,7 +106,7 @@ export default function SignUpPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-500"
+              className="w-full bg-violet-600 hover:bg-violet-700"
             >
               {loading ? (
                 <>
@@ -117,7 +119,7 @@ export default function SignUpPage() {
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               已有账号？{" "}
-              <Link href="/sign-in" className="text-emerald-400 hover:underline">
+              <Link href="/sign-in" className="text-violet-600 hover:underline">
                 登录
               </Link>
             </p>

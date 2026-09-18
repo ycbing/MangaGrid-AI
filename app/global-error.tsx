@@ -27,7 +27,7 @@ export default function GlobalError({
             <p className="text-sm text-muted-foreground">
               应用程序发生了意外错误，请尝试重新加载页面。
             </p>
-            <Button onClick={reset} className="bg-emerald-600 hover:bg-emerald-500 min-h-[44px]">
+            <Button onClick={reset} className="bg-violet-600 hover:bg-violet-700 min-h-[44px]">
               <RotateCw className="h-4 w-4 mr-2" />
               重新加载
             </Button>

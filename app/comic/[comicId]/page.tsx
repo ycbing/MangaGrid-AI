@@ -173,7 +173,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
         body: JSON.stringify({ panelIds: [panelId] }),
       });
       const d = await r.json();
-      if (d.summary) toast.success(`P${d.summary.total ? "" : ""}重新生成完成`);
+      if (d.summary) toast.success("重新生成完成");
       await load();
     } catch {
       toast.error("重试失败");
@@ -185,6 +185,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
   const allPanels = chapters.flatMap((c) => c.panels);
   const doneCount = allPanels.filter((p) => p.status === "done").length;
   const pendingCount = allPanels.filter((p) => p.status === "pending" || p.status === "failed").length;
+  const failedCount = allPanels.filter((p) => p.status === "failed").length;
   const charDone = characters.filter((c) => c.referenceImageUrl).length;
 
   if (loading) {
@@ -236,7 +237,7 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
                 ) : (
                   <ImageIcon className="w-4 h-4" />
                 )}
-                生成全部分格（{pendingCount} 张·{pendingCount} 积分）
+                生成全部分格（{pendingCount} 张 · {pendingCount} 积分）
               </button>
             )}
             <Link
@@ -304,77 +305,121 @@ export default function ComicEditPage({ params }: { params: Promise<{ comicId: s
           )}
         </section>
 
-        {/* 分格 */}
+        {/* 分镜 */}
         <section className="bg-white rounded-2xl border p-5">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <ImageIcon className="w-4.5 h-4.5 text-violet-600" /> 分镜格子
-            <span className="text-xs font-normal text-gray-400">每格 = 一张漫画图 + 对话气泡</span>
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold flex items-center gap-2">
+              <ImageIcon className="w-4.5 h-4.5 text-violet-600" /> 分镜格子
+              <span className="text-xs font-normal text-gray-400">每格 = 一张漫画图 + 对话气泡</span>
+            </h2>
+            {failedCount > 0 && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-red-50 text-red-600">
+                {failedCount} 格失败，可单独重试
+              </span>
+            )}
+          </div>
 
           {allPanels.length === 0 ? (
             <p className="text-gray-400 text-sm py-4 text-center">暂无分格，请重新生成脚本</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {allPanels.map((p) => {
-                const img = toImgUrl(p.imageUrl);
-                const isBusy = p.status === "generating";
-                const isFailed = p.status === "failed";
+            <div className="space-y-6">
+              {chapters.map((ch) => {
+                const chPanels = ch.panels;
+                if (chPanels.length === 0) return null;
+                const chDone = chPanels.filter((p) => p.status === "done").length;
                 return (
-                  <div
-                    key={p.id}
-                    className={`relative rounded-xl border overflow-hidden group ${
-                      isFailed ? "border-red-200" : "border-gray-100"
-                    }`}
-                  >
-                    <div className="aspect-[9/14] bg-gray-100 relative">
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img} alt={`P${p.panelNumber}`} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-1">
-                          <ImageIcon className="w-6 h-6" />
-                          <span className="text-[10px]">待生成</span>
-                        </div>
-                      )}
-                      {isBusy && (
-                        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white text-xs gap-1.5">
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          生成中…
-                        </div>
-                      )}
-                      {isFailed && (
-                        <div className="absolute inset-0 bg-red-50/90 flex flex-col items-center justify-center p-2 text-center">
-                          <XCircle className="w-5 h-5 text-red-500 mb-1" />
-                          <p className="text-[10px] text-red-600 line-clamp-2">{p.errorMessage || "失败"}</p>
-                          <button
-                            onClick={() => retryPanel(p.id)}
-                            disabled={retryingPanel === p.id}
-                            className="mt-1.5 text-[10px] px-2 py-1 bg-red-500 text-white rounded flex items-center gap-1 hover:bg-red-600"
-                          >
-                            {retryingPanel === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                            重试
-                          </button>
-                        </div>
-                      )}
-                      <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
-                        P{p.panelNumber}
+                  <div key={ch.id}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-sm font-medium text-gray-700">
+                        第 {ch.chapterNumber} 话{ch.title ? ` · ${ch.title}` : ""}
                       </span>
-                      {p.status === "done" && (
-                        <span className="absolute top-1.5 right-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 bg-white rounded-full" />
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-2">
-                      <p className="text-[11px] text-gray-600 line-clamp-2">{p.sceneDesc}</p>
-                      <div className="flex items-start gap-1 mt-1 text-[10px]">
-                        {(p.dialogue || p.narration) && (
-                          <MessageCircle className="w-3 h-3 text-violet-400 mt-0.5 shrink-0" />
-                        )}
-                        <p className="text-gray-500 line-clamp-1">
-                          {p.dialogue || p.narration || "无台词"}
-                        </p>
+                      <span className="text-xs text-gray-400">
+                        {chDone}/{chPanels.length} 格
+                      </span>
+                      <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden max-w-[140px]">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400 transition-all"
+                          style={{ width: `${chPanels.length ? Math.round((chDone / chPanels.length) * 100) : 0}%` }}
+                        />
                       </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                      {chPanels.map((p) => {
+                        const img = toImgUrl(p.imageUrl);
+                        const isBusy = p.status === "generating";
+                        const isFailed = p.status === "failed";
+                        const isDone = p.status === "done" && img;
+                        return (
+                          <div
+                            key={p.id}
+                            className={`relative rounded-xl border overflow-hidden group ${
+                              isFailed ? "border-red-200" : "border-gray-100"
+                            }`}
+                          >
+                            <div className="aspect-[9/14] bg-gray-100 relative">
+                              {img ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={img} alt={`P${p.panelNumber}`} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-1">
+                                  <ImageIcon className="w-6 h-6" />
+                                  <span className="text-[10px]">待生成</span>
+                                </div>
+                              )}
+                              {isBusy && (
+                                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white text-xs gap-1.5">
+                                  <Loader2 className="w-5 h-5 animate-spin" />
+                                  生成中…
+                                </div>
+                              )}
+                              {isFailed && (
+                                <div className="absolute inset-0 bg-red-50/90 flex flex-col items-center justify-center p-2 text-center">
+                                  <XCircle className="w-5 h-5 text-red-500 mb-1" />
+                                  <p className="text-[10px] text-red-600 line-clamp-2">{p.errorMessage || "失败"}</p>
+                                  <button
+                                    onClick={() => retryPanel(p.id)}
+                                    disabled={retryingPanel === p.id}
+                                    className="mt-1.5 text-[10px] px-2 py-1 bg-red-500 text-white rounded flex items-center gap-1 hover:bg-red-600"
+                                  >
+                                    {retryingPanel === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                    重试
+                                  </button>
+                                </div>
+                              )}
+                              <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                P{p.panelNumber}
+                              </span>
+                              {isDone && (
+                                <>
+                                  <button
+                                    onClick={() => retryPanel(p.id)}
+                                    disabled={retryingPanel === p.id}
+                                    title="重新生成此格"
+                                    className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition flex items-center gap-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded hover:bg-black/80"
+                                  >
+                                    {retryingPanel === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                    换一张
+                                  </button>
+                                  <span className="absolute bottom-1.5 right-1.5">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-400 bg-white rounded-full" />
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <div className="p-2">
+                              <p className="text-[11px] text-gray-600 line-clamp-2">{p.sceneDesc}</p>
+                              <div className="flex items-start gap-1 mt-1 text-[10px]">
+                                {(p.dialogue || p.narration) && (
+                                  <MessageCircle className="w-3 h-3 text-violet-400 mt-0.5 shrink-0" />
+                                )}
+                                <p className="text-gray-500 line-clamp-1">
+                                  {p.dialogue || p.narration || "无台词"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );

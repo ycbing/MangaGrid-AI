@@ -24,7 +24,7 @@ import dynamic from "next/dynamic";
 // 动态导入模型配置组件（避免服务端渲染问题）
 const ModelConfigSettings = dynamic(
   () => import("@/components/settings/model-config-settings"),
-  { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-emerald-400" /></div> }
+  { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-violet-500" /></div> }
 );
 
 interface UsageLog {
@@ -87,7 +87,7 @@ export default function SettingsPage() {
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
       </div>
     );
   }
@@ -123,7 +123,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab("credits")}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition ${
               activeTab === "credits"
-                ? "bg-emerald-600 text-white shadow-sm"
+                ? "bg-violet-600 text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -136,7 +136,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab("model")}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition ${
               activeTab === "model"
-                ? "bg-emerald-600 text-white shadow-sm"
+                ? "bg-violet-600 text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -153,14 +153,14 @@ export default function SettingsPage() {
             <Card className="border-border/50 bg-card/50">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Coins className="h-5 w-5 text-emerald-400" />
+                  <Coins className="h-5 w-5 text-violet-600" />
                   我的积分
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold text-emerald-400">{balance}</p>
+                    <p className="text-3xl font-bold text-violet-600">{balance}</p>
                     <p className="text-xs text-muted-foreground mt-1">剩余积分</p>
                   </div>
                   <Button
@@ -169,7 +169,7 @@ export default function SettingsPage() {
                         duration: 3000,
                       })
                     }
-                    className="bg-emerald-600 hover:bg-emerald-500 min-h-[44px]"
+                    className="bg-violet-600 hover:bg-violet-700 min-h-[44px]"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     充值积分
@@ -188,7 +188,7 @@ export default function SettingsPage() {
             <Card className="border-border/50 bg-card/50">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Sparkles className="h-5 w-5 text-emerald-400" />
+                  <Sparkles className="h-5 w-5 text-violet-600" />
                   积分消耗说明
                 </CardTitle>
               </CardHeader>
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                         <span>{item.icon}</span>
                         <span>{item.type}</span>
                       </div>
-                      <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
+                      <Badge variant="outline" className="text-violet-600 border-violet-500/30">
                         {item.cost} 积分
                       </Badge>
                     </div>
@@ -216,7 +216,7 @@ export default function SettingsPage() {
             <Card className="border-border/50 bg-card/50">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Clock className="h-5 w-5 text-emerald-400" />
+                  <Clock className="h-5 w-5 text-violet-600" />
                   使用记录
                 </CardTitle>
               </CardHeader>
@@ -286,7 +286,7 @@ export default function SettingsPage() {
           <Card className="border-border/50 bg-card/50">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Cpu className="h-5 w-5 text-emerald-400" />
+                <Cpu className="h-5 w-5 text-violet-600" />
                 模型服务配置
               </CardTitle>
             </CardHeader>
