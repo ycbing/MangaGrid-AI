@@ -1,20 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Plus,
-  BookOpen,
-  Sparkles,
-  Trash2,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { Plus, BookOpen, Sparkles, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogFooter,
@@ -22,82 +14,89 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import ComicCard, { type Comic } from "@/components/dashboard/comic-card";
 
-interface Comic {
-  id: string;
+const GENRE_ZH: Record<string, string> = {
+  fantasy: "玄幻",
+  urban: "都市",
+  ancient: "古风",
+  mystery: "悬疑",
+  romance: "恋爱",
+  scifi: "科幻",
+};
+
+const STYLE_OPTIONS = [
+  { id: "manhua", name: "国漫厚涂" },
+  { id: "manga", name: "日漫" },
+  { id: "ink", name: "水墨国风" },
+  { id: "watercolor", name: "水彩" },
+  { id: "cyberpunk", name: "赛博朋克" },
+  { id: "cartoon", name: "Q版卡通" },
+];
+
+interface EditForm {
   title: string;
-  description: string | null;
-  style: string | null;
-  layoutType: string | null;
-  status: string;
-  coverUrl: string | null;
-  createdAt: string;
-  shareToken: string | null;
-  chapterCount: number | null;
+  description: string;
+  genre: string;
+  style: string;
+  layoutType: string;
 }
-
-const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
-  draft: { text: "草稿", cls: "bg-gray-100 text-gray-600" },
-  generating: { text: "脚本生成中…", cls: "bg-blue-50 text-blue-600" },
-  script_ready: { text: "脚本完成", cls: "bg-amber-50 text-amber-600" },
-  chars_ready: { text: "角色已锁定", cls: "bg-purple-50 text-purple-600" },
-  panels_ready: { text: "分镜完成", cls: "bg-green-50 text-green-600" },
-  panels_partial: { text: "部分完成", cls: "bg-orange-50 text-orange-600" },
-  exported: { text: "已导出", cls: "bg-emerald-50 text-emerald-600" },
-  error: { text: "生成失败", cls: "bg-red-50 text-red-600" },
-};
-
-const STYLE_ZH: Record<string, string> = {
-  manga: "日漫",
-  manhua: "国漫",
-  ink: "水墨",
-  watercolor: "水彩",
-  cyberpunk: "赛博朋克",
-  cartoon: "Q版",
-};
 
 export default function DashboardPage() {
   const router = useRouter();
   const [comics, setComics] = useState<Comic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState("createdAt");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Comic | null>(null);
+  const [editTarget, setEditTarget] = useState<Comic | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sort !== "createdAt") params.set("sort", sort);
+    const qs = params.toString();
+    try {
+      const r = await fetch(`/api/comics${qs ? `?${qs}` : ""}`);
+      const d = await r.json();
+      if (d.comics) setComics(d.comics);
+      else if (d.error) toast.error(d.error);
+    } catch {
+      toast.error("加载失败");
+    }
+  }, [q, sort]);
 
   useEffect(() => {
-    fetch("/api/comics")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.comics) setComics(d.comics);
-        else if (d.error) toast.error(d.error);
-      })
-      .catch(() => toast.error("加载失败"))
-      .finally(() => setLoading(false));
-  }, []);
+    // 搜索输入防抖；切换排序立即刷新
+    const t = setTimeout(() => {
+      load().finally(() => setLoading(false));
+    }, q ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [load, q]);
 
-  const toImgUrl = (p: string | null) => {
-    if (!p) return null;
-    if (p.includes(".cos.")) {
-      try {
-        const u = new URL(p);
-        return `/api/uploads/cos/${encodeURIComponent(u.pathname.slice(1))}`;
-      } catch {
-        return p;
-      }
-    }
-    if (p.startsWith("/api/") || p.startsWith("/uploads/")) return p;
-    if (p.startsWith("http")) return p;
-    return p;
-  };
-
-  const confirmDelete = async (id: string, title: string) => {
-    if (!deleteTarget || deleteTarget.id !== id) return;
-    setDeleting(id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
     try {
-      const r = await fetch(`/api/comics/${id}`, { method: "DELETE" });
+      const r = await fetch(`/api/comics/${deleteTarget.id}`, { method: "DELETE" });
       const d = await r.json();
       if (d.ok) {
-        setComics((list) => list.filter((c) => c.id !== id));
-        toast.success(`已删除《${title}》`);
+        toast.success(`已删除《${deleteTarget.title}》`);
+        await load();
       } else {
         toast.error(d.error || "删除失败");
       }
@@ -106,6 +105,67 @@ export default function DashboardPage() {
     } finally {
       setDeleting(null);
       setDeleteTarget(null);
+    }
+  };
+
+  const copyComic = async (c: Comic) => {
+    if (copyingId) return;
+    setCopyingId(c.id);
+    try {
+      const r = await fetch(`/api/comics/${c.id}/copy`, { method: "POST" });
+      const d = await r.json();
+      if (d.ok) {
+        toast.success(`已复制《${c.title}》`);
+        await load();
+      } else {
+        toast.error(d.error || "复制失败");
+      }
+    } catch {
+      toast.error("复制失败");
+    } finally {
+      setCopyingId(null);
+    }
+  };
+
+  const openEdit = (c: Comic) => {
+    setEditTarget(c);
+    setEditForm({
+      title: c.title,
+      description: c.description || "",
+      genre: c.genre || "fantasy",
+      style: c.style || "manhua",
+      layoutType: c.layoutType || "strip",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editTarget || !editForm || !editForm.title.trim()) return;
+    setSaving(true);
+    try {
+      const r = await fetch(`/api/comics/${editTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editForm.title.trim(),
+          description: editForm.description.trim() || null,
+          genre: editForm.genre,
+          style: editForm.style,
+          layoutType: editForm.layoutType,
+        }),
+      });
+      const d = await r.json();
+      if (d.comic) {
+        toast.success("已保存");
+        setEditTarget(null);
+        setEditForm(null);
+        await load();
+      } else {
+        toast.error(d.error || "保存失败");
+      }
+    } catch {
+      toast.error("保存失败");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -141,82 +201,73 @@ export default function DashboardPage() {
           <div className="text-sm text-gray-500">{comics.length} 部作品</div>
         </div>
 
+        {/* 搜索 / 排序工具栏 */}
+        {!loading && (comics.length > 0 || q) && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="搜索标题或简介…"
+                className="pl-9 bg-white"
+              />
+            </div>
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="w-full sm:w-44 bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="createdAt">最近创建</SelectItem>
+                <SelectItem value="updatedAt">最近更新</SelectItem>
+                <SelectItem value="title">标题 A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-24">
             <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
           </div>
         ) : comics.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-violet-200/70 shadow-sm animate-[fadeUp_.5s_.05s_ease_both]">
-            <Sparkles className="w-12 h-12 text-violet-300 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold mb-2">还没有作品</h2>
-            <p className="text-gray-500 mb-6">输入一个创意或粘贴小说章节，AI 帮你画出第一话</p>
-            <button
-              onClick={() => router.push("/comic/new")}
-              className="btn-brand text-white px-6 py-3 rounded-xl font-medium hover:opacity-95 hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200"
-            >
-              开始创作 →
-            </button>
-          </div>
+          q ? (
+            <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-violet-200/70 shadow-sm">
+              <Search className="w-12 h-12 text-violet-200 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold mb-2">未找到与“{q}”相关的作品</h2>
+              <p className="text-gray-500 mb-6">换个关键词试试，或清除搜索查看全部作品</p>
+              <button
+                onClick={() => setQ("")}
+                className="text-violet-600 font-medium hover:underline"
+              >
+                清除搜索
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-violet-200/70 shadow-sm animate-[fadeUp_.5s_.05s_ease_both]">
+              <Sparkles className="w-12 h-12 text-violet-300 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold mb-2">还没有作品</h2>
+              <p className="text-gray-500 mb-6">输入一个创意或粘贴小说章节，AI 帮你画出第一话</p>
+              <button
+                onClick={() => router.push("/comic/new")}
+                className="btn-brand text-white px-6 py-3 rounded-xl font-medium hover:opacity-95 hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200"
+              >
+                开始创作 →
+              </button>
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {comics.map((c) => {
-              const st = STATUS_LABEL[c.status] || STATUS_LABEL.draft;
-              const cover = toImgUrl(c.coverUrl);
-              return (
-                <div
-                  key={c.id}
-                  className="group bg-white rounded-2xl border border-violet-100/70 overflow-hidden hover:shadow-xl hover:shadow-violet-100 hover:-translate-y-1 transition-all duration-300"
-                >
-                  <Link href={`/comic/${c.id}`} className="block relative aspect-[4/3] bg-gray-100">
-                    {cover ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cover} alt={c.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-50 to-purple-50">
-                        <BookOpen className="w-10 h-10 text-violet-200" />
-                      </div>
-                    )}
-                    <span className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium ${st.cls}`}>
-                      {st.text}
-                    </span>
-                    {c.layoutType === "strip" && (
-                      <span className="absolute top-3 right-3 px-2 py-1 rounded-full text-xs bg-black/60 text-white">
-                        条漫
-                      </span>
-                    )}
-                  </Link>
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold truncate">{c.title}</h3>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
-                          <span>{STYLE_ZH[c.style || "manhua"] || c.style}</span>
-                          <span>·</span>
-                          <span>{c.chapterCount || 1} 话</span>
-                          <span>·</span>
-                          <span>{new Date(c.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setDeleteTarget(c)}
-                        className="text-gray-300 hover:text-red-500 transition"
-                        title="删除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="mt-3">
-                      <Link
-                        href={`/comic/${c.id}`}
-                        className="flex items-center justify-center gap-1.5 w-full bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 hover:-translate-y-0.5 transition-all"
-                      >
-                        继续创作 <ChevronRight className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {comics.map((c) => (
+              <ComicCard
+                key={c.id}
+                comic={c}
+                copying={copyingId === c.id}
+                onDelete={setDeleteTarget}
+                onEdit={openEdit}
+                onCopy={copyComic}
+              />
+            ))}
           </div>
         )}
       </main>
@@ -237,12 +288,107 @@ export default function DashboardPage() {
               </button>
             </DialogClose>
             <button
-              onClick={() => deleteTarget && confirmDelete(deleteTarget.id, deleteTarget.title)}
+              onClick={confirmDelete}
               disabled={deleting === deleteTarget?.id}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition flex items-center gap-1.5"
             >
               {deleting === deleteTarget?.id && <Loader2 className="w-4 h-4 animate-spin" />}
               删除
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 编辑作品弹窗 */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && (setEditTarget(null), setEditForm(null))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>编辑作品</DialogTitle>
+            <DialogDescription>修改作品信息，画风与版式仅影响后续新生成的画面</DialogDescription>
+          </DialogHeader>
+          {editForm && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-title">标题</Label>
+                <Input
+                  id="edit-title"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  placeholder="作品标题"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-desc">简介</Label>
+                <Textarea
+                  id="edit-desc"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="一句话介绍这部作品（可选）"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label>题材</Label>
+                  <Select value={editForm.genre} onValueChange={(v) => setEditForm({ ...editForm, genre: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(GENRE_ZH).map(([id, name]) => (
+                        <SelectItem key={id} value={id}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>画风</Label>
+                  <Select value={editForm.style} onValueChange={(v) => setEditForm({ ...editForm, style: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STYLE_OPTIONS.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>版式</Label>
+                  <Select
+                    value={editForm.layoutType}
+                    onValueChange={(v) => setEditForm({ ...editForm, layoutType: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="strip">条漫</SelectItem>
+                      <SelectItem value="page">页漫</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+                取消
+              </button>
+            </DialogClose>
+            <button
+              onClick={saveEdit}
+              disabled={saving || !editForm?.title.trim()}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition flex items-center gap-1.5"
+            >
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              保存
             </button>
           </DialogFooter>
         </DialogContent>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles, Wand2, Loader2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import { COMIC_CREDIT_COSTS } from "@/lib/constants";
 
 const STYLES = [
   { id: "manhua", name: "国漫厚涂", desc: "彩色精美，光影丰富", emoji: "🎨" },
@@ -212,7 +213,8 @@ export default function CreateComicPage() {
             </>
           ) : (
             <>
-              <Wand2 className="w-5 h-5" /> 生成漫画第一话（消耗 2 积分）
+              <Wand2 className="w-5 h-5" /> 生成漫画第一话（消耗{" "}
+              {COMIC_CREDIT_COSTS.comicScript} 积分）
             </>
           )}
         </button>

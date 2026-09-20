@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { COMIC_CREDIT_COSTS } from "@/lib/constants";
 import {
   ArrowLeft,
   BookOpen,
@@ -68,9 +69,9 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const COST_DISPLAY = [
-  { type: "生成漫画脚本", cost: 2, icon: "📝" },
-  { type: "角色参考图（每张）", cost: 2, icon: "🎭" },
-  { type: "漫画分格生图（每格）", cost: 1, icon: "🖼️" },
+  { type: "生成漫画脚本", cost: COMIC_CREDIT_COSTS.comicScript, icon: "📝" },
+  { type: "角色参考图（每张）", cost: COMIC_CREDIT_COSTS.comicCharRef, icon: "🎭" },
+  { type: "漫画分格生图（每格）", cost: COMIC_CREDIT_COSTS.comicPanel, icon: "🖼️" },
 ];
 
 export default function SettingsPage() {
