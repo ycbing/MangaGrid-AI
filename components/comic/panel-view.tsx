@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-interface Panel {
+export interface Panel {
   id: string;
   panelNumber: number;
   sceneDesc: string;
@@ -20,20 +20,32 @@ function bubbleTextClass(len: number) {
   return "text-sm leading-snug";
 }
 
-/** 单格渲染：图片 + 对话气泡 + 旁白（图字分离，阅读器/分享页共用） */
-export default function PanelView({ panel, img }: { panel: Panel; img: string | null }) {
+/** 单格渲染：图片 + 对话气泡 + 旁白（图字分离，阅读器/分享页/翻页视图共用） */
+export default function PanelView({
+  panel,
+  img,
+  className,
+  imgClassName,
+}: {
+  panel: Panel;
+  img: string | null;
+  /** 覆盖根容器宽度（默认 w-full，翻页视图传 w-fit 使容器贴合图片） */
+  className?: string;
+  /** 追加到图片上（翻页视图用 max-h 约束高度） */
+  imgClassName?: string;
+}) {
   const side = panel.bubbleSide || "bottom";
   const dialogue = panel.dialogue?.trim();
   const narration = panel.narration?.trim();
   const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
-    <div className="relative w-full bg-gray-100 select-none">
+    <div className={`relative bg-gray-100 select-none ${className ?? "w-full"}`}>
       {img && (
         <img
           src={img}
           alt={`P${panel.panelNumber}`}
-          className={`w-full h-auto block transition-opacity duration-300 ${
+          className={`block transition-opacity duration-300 ${imgClassName ?? "w-full h-auto"} ${
             imgLoaded ? "opacity-100" : "opacity-0"
           }`}
           draggable={false}

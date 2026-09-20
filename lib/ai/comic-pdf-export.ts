@@ -1,8 +1,11 @@
 // ============================================
-// 漫格 MangaGrid - 漫画逐格拼版导出 PDF
-// 每个分格一页（竖版），图片适配页宽，
-// 按 bubble_side 叠加台词气泡 + 旁白（图字分离），
-// 页脚标注 标题 · 第N话 · 格X/Y。
+// 漫格 MangaGrid - 漫画拼版导出 PDF
+// strip（条漫）：每个分格一页（竖版），图片适配页宽，
+//   页脚标注 标题 · 第N话 · 格X/Y。
+// page（页漫）：每张 A4 按 3-4 格拼版（与阅读器翻页视图同一套节奏，
+//   见 components/comic/page-layout.ts），格子内叠加气泡/旁白，
+//   页脚标注 第X/Y页。
+// 按 bubble_side 叠加台词气泡 + 旁白（图字分离）。
 // 中文字体：系统黑体/雅黑（env PDF_FONT_PATH 可覆盖）。
 // ============================================
 
@@ -20,6 +23,7 @@ import {
   getSignedCosUrl,
 } from "@/lib/ai/cos-storage";
 import { createLogger } from "@/lib/logger";
+import { groupPanelsIntoPages } from "@/components/comic/page-layout";
 
 const log = createLogger("comic-pdf");
 
@@ -142,9 +146,10 @@ function drawBubble(
   text: string,
   x: number,
   y: number,
-  maxWidth: number
+  maxWidth: number,
+  sizeOverride?: number
 ): void {
-  const size = fontSizeFor(text.length);
+  const size = sizeOverride ?? fontSizeFor(text.length);
   doc.font("CJK").fontSize(size);
   const padX = 10;
   const padY = 7;
@@ -172,9 +177,10 @@ function drawBubble(
 function drawNarration(
   doc: PDFKit.PDFDocument,
   text: string,
-  imgRect: { x: number; y: number; w: number; h: number }
+  imgRect: { x: number; y: number; w: number; h: number },
+  sizeOverride?: number
 ): void {
-  const size = fontSizeFor(text.length);
+  const size = sizeOverride ?? fontSizeFor(text.length);
   doc.font("CJK").fontSize(size);
   const maxW = Math.min(imgRect.w - 20, 300);
   const padX = 10;
@@ -199,7 +205,7 @@ function drawNarration(
   doc.restore();
 }
 
-/** 在图片上叠加台词气泡 + 旁白 */
+/** 在图片上叠加台词气泡 + 旁白（格子越小字号越小，保证小格可读） */
 function drawTextOverlays(
   doc: PDFKit.PDFDocument,
   panel: ExportPanel,
@@ -212,15 +218,23 @@ function drawTextOverlays(
   const narration = panel.narration?.trim();
   const side = panel.bubbleSide || "bottom";
 
+  // 相对整页图宽（547.28pt）的缩放：半宽格 ≈0.6 下限
+  const fontScale = Math.max(0.6, Math.min(1, imgRect.w / 547.28));
+
   // 旁白：顶部居中
   if (narration) {
-    drawNarration(doc, narration, imgRect);
+    drawNarration(
+      doc,
+      narration,
+      imgRect,
+      Math.max(8, Math.round(fontSizeFor(narration.length) * fontScale))
+    );
   }
 
   // 台词气泡：按 bubble_side 定位
   if (dialogue) {
     const maxW = Math.max(imgRect.w * 0.7, 80);
-    const size = fontSizeFor(dialogue.length);
+    const size = Math.max(8, Math.round(fontSizeFor(dialogue.length) * fontScale));
     doc.font("CJK").fontSize(size);
     const innerW = Math.max(maxW - 20, 20);
     const lines = wrapText(doc, dialogue, innerW);
@@ -238,7 +252,7 @@ function drawTextOverlays(
       by = imgRect.y + (imgRect.h - h) / 2;
     } else if (side === "top") {
       bx = imgRect.x + (imgRect.w - w) / 2;
-      by = imgRect.y + 30;
+      by = imgRect.y + 30 * fontScale;
     } else if (side === "center") {
       bx = imgRect.x + (imgRect.w - w) / 2;
       by = imgRect.y + (imgRect.h - h) / 2;
@@ -247,48 +261,153 @@ function drawTextOverlays(
       bx = imgRect.x + (imgRect.w - w) / 2;
       by = imgRect.y + imgRect.h - h - 8;
     }
-    drawBubble(doc, dialogue, bx, by, w);
+    drawBubble(doc, dialogue, bx, by, w, size);
   }
 }
 
-/** 图片下载失败时的降级页：展示场景 + 台词/旁白文字 */
+/** 图片下载失败时的降级块：展示场景 + 台词/旁白文字（rect 缺省为整页） */
 function drawFallbackText(
   doc: PDFKit.PDFDocument,
   panel: ExportPanel,
-  fontPath: string | null
+  fontPath: string | null,
+  rect?: { x: number; y: number; w: number; h: number }
 ): void {
+  const rc = rect ?? { x: 24, y: 24, w: 547.28, h: 793.89 };
+  const textW = Math.max(rc.w - 32, 60);
   const useCjk = !!fontPath;
   doc.save();
-  doc.roundedRect(24, 24, 547.28, 793.89, 8).fill("#f5f3ff");
+  doc.roundedRect(rc.x, rc.y, rc.w, rc.h, 8).fill("#f5f3ff");
   doc.font(useCjk ? "CJK" : "Helvetica");
   doc.fillColor("#111827").fontSize(18);
-  doc.text(`分格 ${panel.panelNumber}`, 40, 48, { width: 500 });
+  doc.text(`分格 ${panel.panelNumber}`, rc.x + 16, rc.y + 24, { width: textW });
   doc.fontSize(12).fillColor("#374151");
   const scene = `画面：${panel.sceneDesc || "（无画面描述）"}`;
-  const sceneLines = wrapText(doc, scene, 500);
+  const sceneLines = wrapText(doc, scene, textW);
   sceneLines.forEach((l, i) =>
-    doc.text(l, 40, 88 + i * 20, { lineBreak: false, width: 0 })
+    doc.text(l, rc.x + 16, rc.y + 64 + i * 20, { lineBreak: false, width: 0 })
   );
-  let ty = 88 + sceneLines.length * 20 + 12;
+  let ty = rc.y + 64 + sceneLines.length * 20 + 12;
   if (panel.dialogue) {
     doc.fillColor("#111827").fontSize(13);
-    doc.text(`台词：${panel.dialogue}`, 40, ty, { width: 500 });
+    doc.text(`台词：${panel.dialogue}`, rc.x + 16, ty, { width: textW });
     ty += 40;
   }
   if (panel.narration) {
     doc.fillColor("#4b5563").fontSize(12);
-    doc.text(`旁白：${panel.narration}`, 40, ty, { width: 500 });
+    doc.text(`旁白：${panel.narration}`, rc.x + 16, ty, { width: textW });
   }
   doc.restore();
 }
 
 // ---- 主生成逻辑 -------------------------------------------------------------
 
+interface ResolvedPanel {
+  panel: ExportPanel;
+  imgBuf: Buffer | null;
+  dim: { width: number; height: number } | null;
+}
+
+/** 在格子矩形内 contain 绘制图片并叠加气泡/旁白；无图降级为文字块 */
+function drawSlot(
+  doc: PDFKit.PDFDocument,
+  r: ResolvedPanel,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fontPath: string | null
+): void {
+  if (r.imgBuf && r.dim && r.dim.width > 0 && r.dim.height > 0) {
+    const scale = Math.min(w / r.dim.width, h / r.dim.height);
+    const iw = r.dim.width * scale;
+    const ih = r.dim.height * scale;
+    const ix = x + (w - iw) / 2;
+    const iy = y + (h - ih) / 2;
+    doc.image(r.imgBuf, ix, iy, { width: iw, height: ih });
+    drawTextOverlays(doc, r.panel, { x: ix, y: iy, w: iw, h: ih }, fontPath);
+  } else {
+    drawFallbackText(doc, r.panel, fontPath, { x, y, w, h });
+  }
+}
+
+/**
+ * 页漫拼版：每张 A4 按 groupPanelsIntoPages 的节奏排 3-4 格（与阅读器翻页视图一致）。
+ * 行高按图片真实比例计算，超页高预算时整页等比压缩、垂直居中，图片不裁切。
+ */
+function buildPageLayoutPdf(
+  doc: PDFKit.PDFDocument,
+  resolved: ResolvedPanel[],
+  opts: BuildPdfOptions,
+  fontPath: string | null,
+  PAGE_W: number,
+  MAX_H: number,
+  PAD: number
+): void {
+  const GAP = 10;
+  const footerH = 22;
+  const contentW = PAGE_W - PAD * 2;
+  const contentH = MAX_H - PAD * 2 - footerH;
+  const halfW = (contentW - GAP) / 2;
+
+  const layoutPages = groupPanelsIntoPages(resolved.length);
+
+  layoutPages.forEach((page, pi) => {
+    if (pi > 0) doc.addPage({ size: [PAGE_W, MAX_H], margin: 0 });
+
+    // 行自然高：full 行按 contentW 比例；half 行取两格较矮者（高者 contain 留白）
+    const rowHeights = page.rows.map((row) => {
+      if (row.slots.length === 1) {
+        const r = resolved[row.slots[0].panelIndex];
+        return r.dim && r.dim.width > 0
+          ? contentW * (r.dim.height / r.dim.width)
+          : contentW * 0.75;
+      }
+      const hs = row.slots.map((s) => {
+        const r = resolved[s.panelIndex];
+        return r.dim && r.dim.width > 0
+          ? halfW * (r.dim.height / r.dim.width)
+          : halfW * 0.75;
+      });
+      return Math.min(hs[0], hs[1] ?? hs[0]);
+    });
+
+    // 超预算整页等比压缩，整块垂直居中
+    const naturalTotal =
+      rowHeights.reduce((a, b) => a + b, 0) + GAP * (rowHeights.length - 1);
+    const scaleFactor = naturalTotal > contentH ? contentH / naturalTotal : 1;
+    const drawHs = rowHeights.map((h) => h * scaleFactor);
+    const totalH = drawHs.reduce((a, b) => a + b, 0) + GAP * (rowHeights.length - 1);
+    let y = PAD + (contentH - totalH) / 2;
+
+    page.rows.forEach((row, ri) => {
+      const rowH = drawHs[ri];
+      if (row.slots.length === 1) {
+        drawSlot(doc, resolved[row.slots[0].panelIndex], PAD, y, contentW, rowH, fontPath);
+      } else {
+        row.slots.forEach((s, si) => {
+          drawSlot(doc, resolved[s.panelIndex], PAD + si * (halfW + GAP), y, halfW, rowH, fontPath);
+        });
+      }
+      y += rowH + GAP;
+    });
+
+    // 页脚
+    const label = `${opts.title} · 第${opts.chapterNumber}话 · 第${pi + 1}/${layoutPages.length}页`;
+    doc.save();
+    doc.font(fontPath ? "CJK" : "Helvetica").fontSize(9).fillColor("#9ca3af");
+    const tw = doc.widthOfString(label);
+    doc.text(label, (PAGE_W - tw) / 2, MAX_H - 16, { lineBreak: false, width: 0 });
+    doc.restore();
+  });
+}
+
 export interface BuildPdfOptions {
   title: string;
   chapterNumber: number;
   chapterTitle?: string | null;
   panels: ExportPanel[];
+  /** 版式：page 走 A4 多格拼版，缺省/strip 走一格一页 */
+  layoutType?: string | null;
 }
 
 /** 生成逐格拼版 PDF，返回 Buffer */
@@ -330,7 +449,11 @@ export async function buildComicPdf(opts: BuildPdfOptions): Promise<Buffer> {
   }
 
   const doc = new PDFDocument({
-    size: resolved.length ? [PAGE_W, resolved[0].pageH] : [PAGE_W, MAX_H],
+    // 页漫画册固定 A4；strip 沿用首格比例的自适应页高
+    size:
+      opts.layoutType === "page" || !resolved.length
+        ? [PAGE_W, MAX_H]
+        : [PAGE_W, resolved[0].pageH],
     margin: 0,
     bufferPages: true,
   });
@@ -354,6 +477,13 @@ export async function buildComicPdf(opts: BuildPdfOptions): Promise<Buffer> {
   if (resolved.length === 0) {
     doc.font(fontPath ? "CJK" : "Helvetica").fontSize(18);
     doc.text("该章节暂无已生成的分格图，无法导出", PAD, PAD, { width: PAGE_W - PAD * 2 });
+  }
+
+  // 页漫：A4 多格拼版路径（与阅读器翻页视图同一套节奏）
+  if (opts.layoutType === "page" && resolved.length > 0) {
+    buildPageLayoutPdf(doc, resolved, opts, fontPath, PAGE_W, MAX_H, PAD);
+    doc.end();
+    return done;
   }
 
   resolved.forEach((r, i) => {
@@ -449,6 +579,7 @@ export async function exportComicChapterPdf(
     chapterNumber: chapter.chapterNumber,
     chapterTitle: chapter.title,
     panels,
+    layoutType: comic.layoutType,
   });
 
   return {

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Loader2, Eye, Share2, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import PanelView from "@/components/comic/panel-view";
+import PagedComicView, { useReadMode } from "@/components/comic/paged-comic-view";
 
 interface ComicData {
   id: string;
@@ -42,6 +43,7 @@ export default function ShareComicPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showTopBtn, setShowTopBtn] = useState(false);
+  const [readMode, setReadMode] = useReadMode();
 
   useEffect(() => {
     fetch(`/api/share-comic/${token}`)
@@ -103,6 +105,7 @@ export default function ShareComicPage() {
 
   const allPanels = chapters.flatMap((c) => c.panels);
   const isStrip = comic.layoutType !== "page";
+  const paged = !isStrip && readMode === "paged";
 
   return (
     <div className="min-h-screen bg-app">
@@ -126,6 +129,30 @@ export default function ShareComicPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!isStrip && (
+              <div className="flex items-center bg-violet-50 p-0.5 rounded-lg">
+                <button
+                  onClick={() => setReadMode("paged")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition ${
+                    readMode === "paged"
+                      ? "bg-white shadow text-violet-700"
+                      : "text-gray-500 hover:text-violet-600"
+                  }`}
+                >
+                  翻页
+                </button>
+                <button
+                  onClick={() => setReadMode("scroll")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition ${
+                    readMode === "scroll"
+                      ? "bg-white shadow text-violet-700"
+                      : "text-gray-500 hover:text-violet-600"
+                  }`}
+                >
+                  滚动
+                </button>
+              </div>
+            )}
             <span className="text-[11px] text-gray-500 flex items-center gap-1">
               <Eye className="w-3.5 h-3.5" /> {(comic.shareCount || 0) + 1}
             </span>
@@ -139,9 +166,15 @@ export default function ShareComicPage() {
         </div>
       </header>
 
-      <main className={`max-w-2xl mx-auto ${isStrip ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-2 p-4"}`}>
+      <main
+        className={`max-w-2xl mx-auto ${
+          paged ? "" : isStrip ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-2 p-4"
+        }`}
+      >
         {allPanels.length === 0 ? (
           <div className="text-center py-32 text-gray-400">本话还没有内容</div>
+        ) : paged ? (
+          <PagedComicView panels={allPanels} toImgUrl={toImgUrl} />
         ) : (
           allPanels.map((p) => (
             <PanelView key={p.id} panel={p} img={toImgUrl(p.imageUrl)} />

@@ -104,11 +104,9 @@ export default function ComicCard({ comic: c, copying, onDelete, onEdit, onCopy 
         <span className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium ${st.cls}`}>
           {st.text}
         </span>
-        {c.layoutType === "strip" && (
-          <span className="absolute top-3 right-3 px-2 py-1 rounded-full text-xs bg-black/60 text-white">
-            条漫
-          </span>
-        )}
+        <span className="absolute top-3 right-3 px-2 py-1 rounded-full text-xs bg-black/60 text-white">
+          {c.layoutType === "page" ? "页漫" : "条漫"}
+        </span>
       </Link>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">

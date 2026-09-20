@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Download, Loader2, ChevronUp, List } from "lucide-react";
 import { toast } from "sonner";
 import PanelView from "@/components/comic/panel-view";
+import PagedComicView, { useReadMode } from "@/components/comic/paged-comic-view";
+import { groupPanelsIntoPages } from "@/components/comic/page-layout";
 
 interface Panel {
   id: string;
@@ -39,6 +41,7 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
   const [activeChapter, setActiveChapter] = useState(0);
   const [showTopBtn, setShowTopBtn] = useState(false);
   const [chapterMenuOpen, setChapterMenuOpen] = useState(false);
+  const [readMode, setReadMode] = useReadMode();
 
   const load = useCallback(async () => {
     try {
@@ -104,6 +107,8 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
   const chapter = validChapters[Math.min(activeChapter, validChapters.length - 1)];
   const panels = chapter?.panels || [];
   const isStrip = comic.layoutType !== "page";
+  const paged = !isStrip && readMode === "paged";
+  const pageCount = groupPanelsIntoPages(panels.length).length;
 
   // 导出当前话为逐格拼版 PDF
   const [exporting, setExporting] = useState(false);
@@ -151,6 +156,30 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!isStrip && (
+              <div className="flex items-center bg-violet-50 p-0.5 rounded-lg">
+                <button
+                  onClick={() => setReadMode("paged")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition ${
+                    readMode === "paged"
+                      ? "bg-white shadow text-violet-700"
+                      : "text-gray-500 hover:text-violet-600"
+                  }`}
+                >
+                  翻页
+                </button>
+                <button
+                  onClick={() => setReadMode("scroll")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition ${
+                    readMode === "scroll"
+                      ? "bg-white shadow text-violet-700"
+                      : "text-gray-500 hover:text-violet-600"
+                  }`}
+                >
+                  滚动
+                </button>
+              </div>
+            )}
             {chapter && (
               <button
                 onClick={exportPdf}
@@ -162,7 +191,9 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
                 导出 PDF
               </button>
             )}
-            <span className="text-xs text-gray-500">{panels.length} 格</span>
+            <span className="text-xs text-gray-500">
+              {paged ? `${pageCount} 页` : `${panels.length} 格`}
+            </span>
             {validChapters.length > 1 && (
               <div className="relative">
                 <button
@@ -204,7 +235,11 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
       </header>
 
       {/* 正文 */}
-      <main className={`max-w-2xl mx-auto ${isStrip ? "pt-0" : "grid grid-cols-1 sm:grid-cols-2 gap-2 p-4"}`}>
+      <main
+        className={`max-w-2xl mx-auto ${
+          paged ? "" : isStrip ? "pt-0" : "grid grid-cols-1 sm:grid-cols-2 gap-2 p-4"
+        }`}
+      >
         {panels.length === 0 ? (
           <div className="text-center py-32 text-gray-500">
             <p className="mb-3">还没有完成的分镜图</p>
@@ -212,6 +247,8 @@ export default function ComicReaderPage({ params }: { params: Promise<{ comicId:
               去生成 →
             </Link>
           </div>
+        ) : paged ? (
+          <PagedComicView key={chapter?.id} panels={panels} toImgUrl={toImgUrl} />
         ) : (
           panels.map((p) => <PanelView key={p.id} panel={p} img={toImgUrl(p.imageUrl)} />)
         )}
