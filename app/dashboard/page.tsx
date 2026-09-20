@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, BookOpen, Sparkles, Search, Loader2 } from "lucide-react";
+import { Plus, BookOpen, Sparkles, Search, Loader2, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -183,12 +183,20 @@ export default function DashboardPage() {
               <div className="text-[10px] text-violet-400 font-medium tracking-widest">AI COMIC STUDIO</div>
             </div>
           </Link>
-          <button
-            onClick={() => router.push("/comic/new")}
-            className="flex items-center gap-1.5 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200"
-          >
-            <Plus className="w-4 h-4" /> 新建漫画
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/comic/templates")}
+              className="flex items-center gap-1.5 bg-white text-violet-700 border border-violet-200 px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium hover:border-violet-400 hover:bg-violet-50 hover:-translate-y-0.5 transition-all"
+            >
+              <LayoutTemplate className="w-4 h-4" /> <span className="hidden sm:inline">模板市场</span>
+            </button>
+            <button
+              onClick={() => router.push("/comic/new")}
+              className="flex items-center gap-1.5 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200"
+            >
+              <Plus className="w-4 h-4" /> <span className="hidden sm:inline">新建漫画</span>
+            </button>
+          </div>
         </div>
       </header>
 

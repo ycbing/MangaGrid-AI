@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { comics, comicChapters, comicCharacters, comicPanels } from "@/lib/db/comic-schema";
+import { comicTemplates } from "@/lib/db/comic-template-schema";
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { generateComicScript } from "@/lib/ai/comic-script-generator";
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
     const body = await request.json();
-    const { title, sourceText, genre = "fantasy", style = "manhua", layoutType = "strip", panelCount } = body;
+    const { title, sourceText, genre = "fantasy", style = "manhua", layoutType = "strip", panelCount, templateId } = body;
 
     if (!sourceText || sourceText.trim().length < 10) {
       return NextResponse.json({ error: "请提供至少 10 字的创意或小说内容" }, { status: 400 });
@@ -98,13 +99,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 创建作品行
+    // 创建作品行（来自模板则 source 标记为 template；模板失效静默回退，不阻断创建）
+    let comicSource = "original";
+    if (templateId) {
+      const [tpl] = await db
+        .select({ id: comicTemplates.id })
+        .from(comicTemplates)
+        .where(and(eq(comicTemplates.id, templateId), eq(comicTemplates.enabled, true)))
+        .limit(1);
+      if (tpl) comicSource = "template";
+    }
     const comicId = uuidv4();
     const shareToken = uuidv4().replace(/-/g, "").slice(0, 12);
     await db.insert(comics).values({
       id: comicId,
       userId: session.user.id,
       title: title?.trim() || "未命名漫画",
+      source: comicSource,
       sourceText: sourceText.trim(),
       genre,
       style,

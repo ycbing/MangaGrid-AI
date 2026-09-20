@@ -11,19 +11,12 @@ import { db, modelConfigs } from "@/lib/db";
 import { encrypt, decrypt, maskApiKey } from "@/lib/crypto";
 import { eq } from "drizzle-orm";
 import { createLogger } from "@/lib/logger";
+import { isAdminUser } from "@/lib/admin";
 
 const log = createLogger("admin-model-configs-api");
 
-// 管理员用户 ID 列表（首个注册用户即为管理员）
-const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS || "").split(",").filter(Boolean);
-
 function isAdmin(userId: string): boolean {
-  if (ADMIN_USER_IDS.length > 0) {
-    return ADMIN_USER_IDS.includes(userId);
-  }
-  // 回退: 检查是否为首个用户
-  // 通过简单的 user_id 判断，实际生产中应有 role 字段
-  return userId === "f9d3168a-f21f-44e2-8343-d47d7690298e";
+  return isAdminUser(userId);
 }
 
 // GET — 列出所有全局配置

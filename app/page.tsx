@@ -300,7 +300,7 @@ export default function HomePage() {
           {TEMPLATES.map((t) => (
             <Link
               key={t.title}
-              href="/comic/new"
+              href="/comic/templates"
               className={`group relative bg-gradient-to-br ${t.grad} rounded-3xl border border-violet-100/70 p-7 hover:shadow-xl hover:-translate-y-1.5 transition-all`}
             >
               <span className="text-[42px] block mb-5 group-hover:scale-110 group-hover:-rotate-6 transition-transform origin-left">{t.emoji}</span>
@@ -310,10 +310,18 @@ export default function HomePage() {
               </div>
               <p className="text-[13px] text-gray-500 leading-relaxed">{t.theme}</p>
               <div className="mt-5 text-[13px] font-medium text-violet-600 opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
-                用这个模板创作 <ArrowRight className="w-3.5 h-3.5" />
+                去模板市场看看 <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </Link>
           ))}
+        </div>
+        <div className="text-center mt-8">
+          <Link
+            href="/comic/templates"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-700 hover:underline"
+          >
+            查看全部模板 <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </section>
 

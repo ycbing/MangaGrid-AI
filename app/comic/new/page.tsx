@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles, Wand2, Loader2, BookOpen } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Sparkles, Wand2, Loader2, BookOpen, X } from "lucide-react";
 import { toast } from "sonner";
 import { COMIC_CREDIT_COSTS } from "@/lib/constants";
 
@@ -32,14 +32,65 @@ const TEMPLATES = [
   { text: "深夜便利店的店员发现，每晚 12 点整，总有一个穿红裙的女人来买同一种啤酒", genre: "mystery" },
 ];
 
-export default function CreateComicPage() {
+interface ActiveTemplate {
+  id: string;
+  title: string;
+  description: string;
+  content: string;
+  genre: string | null;
+  style: string | null;
+  layoutType: string | null;
+  panelCount: number | null;
+}
+
+function CreateComicContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const templateId = searchParams.get("template");
   const [sourceText, setSourceText] = useState("");
   const [genre, setGenre] = useState("fantasy");
   const [style, setStyle] = useState("manhua");
   const [layoutType, setLayoutType] = useState<"strip" | "page">("strip");
   const [title, setTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState<ActiveTemplate | null>(null);
+
+  // 模板联动：?template=<id> 自动填充（title 不预填，服务端会以脚本标题覆盖）
+  useEffect(() => {
+    if (!templateId) return;
+    let cancelled = false;
+    fetch(`/api/templates/${templateId}`)
+      .then(async (r) => {
+        const d = await r.json();
+        if (cancelled) return;
+        if (r.ok && d.template) {
+          const t = d.template;
+          setSourceText(t.content);
+          if (t.genre) setGenre(t.genre);
+          if (t.style) setStyle(t.style);
+          if (t.layoutType === "strip" || t.layoutType === "page") setLayoutType(t.layoutType);
+          setActiveTemplate(t);
+        } else {
+          toast.error(d.error || "模板不存在或已下架");
+          router.replace("/comic/new");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error("模板加载失败");
+          router.replace("/comic/new");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateId]);
+
+  const clearTemplate = () => {
+    setActiveTemplate(null);
+    router.replace("/comic/new");
+  };
 
   const submit = async () => {
     if (sourceText.trim().length < 10) {
@@ -57,6 +108,8 @@ export default function CreateComicPage() {
           genre,
           style,
           layoutType,
+          templateId: activeTemplate?.id,
+          panelCount: activeTemplate?.panelCount || undefined,
         }),
       });
       const d = await r.json();
@@ -99,6 +152,24 @@ export default function CreateComicPage() {
           <h1 className="text-3xl font-bold">从文字到漫画，只需一步</h1>
           <p className="text-gray-500 mt-2">粘贴小说章节或输入创意，AI 自动生成脚本、锁定角色、画出分镜</p>
         </div>
+
+        {/* 模板来源条 */}
+        {activeTemplate && (
+          <div className="mb-6 flex items-center gap-3 bg-violet-50 border border-violet-100 rounded-2xl px-4 py-3 animate-[fadeUp_.5s_ease_both]">
+            <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
+            <div className="min-w-0 flex-1 text-sm">
+              <span className="font-medium text-violet-700">正在使用模板：{activeTemplate.title}</span>
+              <span className="text-gray-500 hidden sm:inline"> · {activeTemplate.description}</span>
+            </div>
+            <button
+              onClick={clearTemplate}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-violet-600 hover:bg-white transition shrink-0"
+              title="清除模板"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* 快速模板 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 animate-[fadeUp_.5s_.05s_ease_both]">
@@ -220,5 +291,20 @@ export default function CreateComicPage() {
         </button>
       </main>
     </div>
+  );
+}
+
+// useSearchParams 需要 Suspense 边界（静态 prerender 要求），参照 sign-in 页模式
+export default function CreateComicPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-app flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+        </div>
+      }
+    >
+      <CreateComicContent />
+    </Suspense>
   );
 }

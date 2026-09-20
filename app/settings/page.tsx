@@ -27,6 +27,7 @@ import {
   MailCheck,
   ShieldCheck,
   KeyRound,
+  LayoutTemplate,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -45,6 +46,12 @@ import { RECHARGE_TIERS } from "@/lib/constants";
 // 动态导入模型配置组件（避免服务端渲染问题）
 const ModelConfigSettings = dynamic(
   () => import("@/components/settings/model-config-settings"),
+  { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-violet-500" /></div> }
+);
+
+// 模板管理（管理员）
+const TemplateAdminSettings = dynamic(
+  () => import("@/components/settings/template-admin-settings"),
   { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-violet-500" /></div> }
 );
 
@@ -79,7 +86,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [creditInfo, setCreditInfo] = useState<CreditInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"credits" | "model">("credits");
+  const [activeTab, setActiveTab] = useState<"credits" | "model" | "templates">("credits");
   const [rechargeOpen, setRechargeOpen] = useState(false);
   const [recharging, setRecharging] = useState(false);
   const [selectedTier, setSelectedTier] = useState(0);
@@ -91,6 +98,12 @@ export default function SettingsPage() {
     emailVerified: string | null;
     createdAt: string;
   } | null>(null);
+
+  // 管理员判断（与 components/settings/model-config-settings.tsx 同口径）
+  const adminUserIds = (
+    process.env.NEXT_PUBLIC_ADMIN_USER_IDS || "f9d3168a-f21f-44e2-8343-d47d7690298e"
+  ).split(",");
+  const isAdmin = !!session?.user?.id && adminUserIds.includes(session.user.id);
 
   const fetchCredits = useCallback(async () => {
     try {
@@ -251,6 +264,21 @@ export default function SettingsPage() {
               模型服务
             </span>
           </button>
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab("templates")}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition ${
+                activeTab === "templates"
+                  ? "bg-violet-600 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <LayoutTemplate className="h-4 w-4" />
+                模板管理
+              </span>
+            </button>
+          )}
         </div>
 
         {activeTab === "credits" ? (
@@ -445,7 +473,7 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </>
-        ) : (
+        ) : activeTab === "model" ? (
           /* 模型服务配置 */
           <Card className="border-border/50 bg-card/50">
             <CardHeader className="pb-3">
@@ -456,6 +484,19 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <ModelConfigSettings />
+            </CardContent>
+          </Card>
+        ) : (
+          /* 模板管理（管理员） */
+          <Card className="border-border/50 bg-card/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <LayoutTemplate className="h-5 w-5 text-violet-600" />
+                模板管理
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TemplateAdminSettings />
             </CardContent>
           </Card>
         )}

@@ -91,7 +91,7 @@ GET  /api/user/model-configs / api/model-configs  模型配置
 **待办（Roadmap）**
 - [ ] 部署上线（PM2 + Nginx）——配置就绪：`deploy/nginx.conf` + `docs/DEPLOY.md`，待服务器实际执行
 - [x] 页漫(page) 布局完善
-- [ ] 模板市场（预设漫改模板）
+- [x] 模板市场（预设漫改模板：comic_templates 表 + 管理端 settings「模板管理」tab + /comic/templates 市场页 + 向导 ?template= 联动）
 - [x] 导出 PDF（逐格拼版）
 - [x] 账号自服务（忘记密码 / 邮箱验证 / 头像）
 - [x] Dashboard 编辑/复制、作品搜索/排序、生图成本提示
